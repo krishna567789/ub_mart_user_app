@@ -46,7 +46,12 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'UB Mart',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.buildDynamicTheme(dynamicColor),
+          theme: AppTheme.buildDynamicTheme(
+            primaryColor: settingsProvider.getPrimaryColor(),
+            accentColor: settingsProvider.getAccentColor(),
+            backgroundColor: settingsProvider.getBackgroundColor(),
+            textPrimaryColor: settingsProvider.getTextPrimaryColor(),
+          ),
           home: showInApp 
             ? SeasonalOverlay(
                 seasonMode: seasonMode,
