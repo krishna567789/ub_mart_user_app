@@ -9,6 +9,7 @@ import '../models/homepage_section_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/product_card.dart';
 import '../widgets/cart_bottom_bar.dart';
+import '../widgets/shimmer_loaders.dart';
 import 'location_select_screen.dart';
 import 'product_detail_screen.dart';
 import 'product_list_screen.dart';
@@ -23,6 +24,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
+  int _activeBannerIndex = 0;
+
+  final List<String> _popularSuggestions = [
+    "Milk", "Bread", "Eggs", "Atta", "Chips", "Cold Drinks", "Apples", "Butter"
+  ];
 
   @override
   void initState() {
@@ -74,25 +80,37 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.flash_on, color: AppTheme.accent, size: 16),
-                  SizedBox(width: 4),
-                  Text(
-                    "DELIVERY IN 10 MINS",
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.accent,
-                      letterSpacing: 0.8,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentLight,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.bolt, color: AppTheme.accent, size: 14),
+                        SizedBox(width: 2),
+                        Text(
+                          "10 MINS",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.accent,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 2),
               Row(
                 children: [
                   Text(
-                    storeProvider.selectedStore?.name ?? "Select Location",
+                    storeProvider.selectedStore?.name ?? "Select Store Location",
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -107,25 +125,36 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: AppTheme.primary),
+            icon: const Icon(Icons.sync, color: AppTheme.primary),
             onPressed: _loadData,
           ),
         ],
       ),
       body: homeProvider.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 16),
+              child: Column(
+                children: const [
+                  BannerShimmer(),
+                  SizedBox(height: 16),
+                  CategoryShimmer(),
+                  SizedBox(height: 16),
+                  ProductHorizontalShimmer(),
+                ],
+              ),
+            )
           : RefreshIndicator(
               onRefresh: () async => _loadData(),
               color: AppTheme.primary,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 80),
+                padding: const EdgeInsets.only(bottom: 90),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Search Bar
                     Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                       child: TextField(
                         controller: _searchController,
                         onChanged: (val) {
@@ -158,7 +187,36 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                    // Search Mode
+                    // Quick Search Suggestion Chips if user is searching or empty
+                    if (_searchController.text.trim().isEmpty)
+                      SizedBox(
+                        height: 38,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          itemCount: _popularSuggestions.length,
+                          itemBuilder: (context, index) {
+                            final sug = _popularSuggestions[index];
+                            return Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              child: ActionChip(
+                                label: Text(sug),
+                                labelStyle: const TextStyle(fontSize: 11, color: AppTheme.textPrimary),
+                                backgroundColor: Colors.white,
+                                side: BorderSide(color: Colors.grey.shade300),
+                                onPressed: () {
+                                  _searchController.text = sug;
+                                  setState(() {});
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                    const SizedBox(height: 8),
+
+                    // Search Mode vs Normal Mode
                     if (_searchController.text.trim().isNotEmpty)
                       _buildSearchResults(productProvider, _searchController.text.trim())
                     else ...[
@@ -168,22 +226,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           height: 140,
                           child: PageView.builder(
                             itemCount: homeProvider.banners.length,
-                            controller: PageController(viewportFraction: 0.9),
+                            controller: PageController(viewportFraction: 0.92),
+                            onPageChanged: (idx) {
+                              setState(() {
+                                _activeBannerIndex = idx;
+                              });
+                            },
                             itemBuilder: (context, index) {
                               final banner = homeProvider.banners[index];
                               return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 6),
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 4,
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
                                     )
                                   ],
                                 ),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(14),
                                   child: CachedNetworkImage(
                                     imageUrl: banner.imageUrl,
                                     fit: BoxFit.cover,
@@ -202,21 +266,41 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                           ),
                         ),
+                        const SizedBox(height: 8),
+
+                        // Banner Page Dots
+                        if (homeProvider.banners.length > 1)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(homeProvider.banners.length, (idx) {
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                width: _activeBannerIndex == idx ? 18 : 6,
+                                height: 6,
+                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                decoration: BoxDecoration(
+                                  color: _activeBannerIndex == idx ? AppTheme.primary : Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
+                          ),
+
                         const SizedBox(height: 16),
                       ],
 
-                      // 2. Main Categories Avatars
+                      // 2. Main Categories Avatars Grid
                       if (homeProvider.mainCategories.isNotEmpty) ...[
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text(
-                            "Shop By Category",
+                            "Explore Categories",
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
-                          height: 100,
+                          height: 105,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -235,13 +319,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   );
                                 },
                                 child: Container(
-                                  width: 75,
-                                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                                  width: 78,
+                                  margin: const EdgeInsets.symmetric(horizontal: 4),
                                   child: Column(
                                     children: [
                                       Container(
-                                        width: 60,
-                                        height: 60,
+                                        width: 62,
+                                        height: 62,
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           shape: BoxShape.circle,
@@ -272,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: 11,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
@@ -285,11 +369,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // 3. Dynamic Homepage Sections from Backend Builder
+                      // 3. Dynamic Homepage Sections from Admin Builder
                       for (var section in homeProvider.homepageSections)
                         _buildDynamicSection(section),
 
-                      // 4. Popular Products Section
+                      // 4. Popular Items Section
                       if (productProvider.products.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -410,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppTheme.primaryLight,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
         ),
         child: Row(
@@ -445,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (section.type == 'FLASH_SALE')
                   const Padding(
                     padding: EdgeInsets.only(right: 6.0),
-                    child: Icon(Icons.flash_on, color: AppTheme.accent, size: 20),
+                    child: Icon(Icons.bolt, color: AppTheme.accent, size: 22),
                   ),
                 Text(
                   section.title,

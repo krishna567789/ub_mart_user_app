@@ -52,6 +52,52 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     }
   }
 
+  Widget _buildOrderTimeline(String status) {
+    final List<String> stages = ['PENDING', 'ACCEPTED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+    final int currentStageIndex = stages.indexOf(status);
+
+    if (status == 'CANCELLED') {
+      return Container(
+        padding: const EdgeInsets.all(8),
+        color: Colors.red.shade50,
+        child: const Text("Order Cancelled", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(stages.length, (index) {
+          final isCompleted = index <= currentStageIndex;
+          final stageName = stages[index]
+              .replaceAll('_', ' ')
+              .replaceAll('OUT FOR DELIVERY', 'OUT')
+              .toLowerCase();
+
+          return Column(
+            children: [
+              Icon(
+                isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: isCompleted ? AppTheme.primary : Colors.grey.shade400,
+                size: 20,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                stageName[0].toUpperCase() + stageName.substring(1),
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                  color: isCompleted ? AppTheme.primary : Colors.grey,
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -91,7 +137,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         title: const Text("My Orders"),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.sync),
             onPressed: _loadOrders,
           ),
         ],
@@ -162,6 +208,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  // Live Timeline Progress
+                                  _buildOrderTimeline(order.status),
+                                  const Divider(),
+
                                   const Text(
                                     "Items Ordered:",
                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
