@@ -1,0 +1,5 @@
+package com.ubmart.un_mart_user_app
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
