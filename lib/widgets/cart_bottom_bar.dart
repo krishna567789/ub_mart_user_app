@@ -27,6 +27,7 @@ class CartBottomBar extends StatelessWidget {
           ),
         ],
       ),
+
       child: SafeArea(
         top: false,
         child: Row(

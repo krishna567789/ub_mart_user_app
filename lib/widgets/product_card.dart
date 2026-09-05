@@ -107,6 +107,7 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
                   ),
+
                 if (widget.product.badge != null && widget.product.badge!.isNotEmpty)
                   Positioned(
                     top: 6,

@@ -60,6 +60,7 @@ class CategoryShimmer extends StatelessWidget {
       ),
     );
   }
+
 }
 
 class ProductGridShimmer extends StatelessWidget {

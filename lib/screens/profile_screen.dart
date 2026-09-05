@@ -2,12 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/store_provider.dart';
+import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'location_select_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  void _showApiUrlDialog(BuildContext context) {
+    final controller = TextEditingController(text: ApiConfig.baseUrl);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("API Base URL Setting"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Default Emulator: http://10.0.2.2:3000/api\nPhysical Device: http://<Your_WiFi_IP>:3000/api",
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: "Base API URL",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ApiConfig.customBaseUrl = controller.text.trim();
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("API Base URL set to ${ApiConfig.baseUrl}")),
+              );
+              Provider.of<StoreProvider>(context, listen: false).fetchStores();
+            },
+            child: const Text("Save & Reconnect"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -161,6 +213,14 @@ class ProfileScreen extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => const LocationSelectScreen()),
                       );
                     },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.dns, color: AppTheme.primary),
+                    title: const Text("Backend API Settings"),
+                    subtitle: Text(ApiConfig.baseUrl),
+                    trailing: const Icon(Icons.edit, size: 18),
+                    onTap: () => _showApiUrlDialog(context),
                   ),
                   const Divider(height: 1),
                   ListTile(
