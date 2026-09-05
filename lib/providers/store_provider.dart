@@ -5,8 +5,6 @@ import '../services/storage_service.dart';
 import '../config/api_config.dart';
 
 class StoreProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
-
   List<StoreModel> _stores = [];
   StoreModel? _selectedStore;
   bool _isLoading = false;
@@ -26,6 +24,7 @@ class StoreProvider with ChangeNotifier {
       _selectedStore = await StorageService.getSelectedStore();
       if (_selectedStore != null) {
         ApiConfig.defaultStoreId = _selectedStore!.id;
+        apiService.setStoreId(_selectedStore!.id);
       }
 
       // 2. Fetch list of stores
@@ -45,9 +44,12 @@ class StoreProvider with ChangeNotifier {
 
   Future<void> fetchStores() async {
     try {
-      final data = await _apiService.get('/stores');
+      final data = await apiService.get('/stores');
       if (data is List) {
         _stores = data.map((s) => StoreModel.fromJson(s)).toList();
+        if (_selectedStore == null && _stores.isNotEmpty) {
+          selectStore(_stores.first);
+        }
         notifyListeners();
       }
     } catch (e) {
@@ -58,6 +60,7 @@ class StoreProvider with ChangeNotifier {
   Future<void> selectStore(StoreModel store) async {
     _selectedStore = store;
     ApiConfig.defaultStoreId = store.id;
+    apiService.setStoreId(store.id);
     await StorageService.saveSelectedStore(store);
     notifyListeners();
   }

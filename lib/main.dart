@@ -9,6 +9,7 @@ import 'providers/store_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'theme/app_theme.dart';
+import 'theme/seasonal_overlay.dart';
 import 'services/api_service.dart';
 
 void main() {
@@ -38,11 +39,21 @@ class MyApp extends StatelessWidget {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         final dynamicColor = settingsProvider.getPrimaryColor();
+        final seasonMode = settingsProvider.settings?.seasonalTheme.mode ?? 'NONE';
+        final intensity = settingsProvider.settings?.seasonalTheme.intensity ?? 'MEDIUM';
+        final showInApp = settingsProvider.settings?.seasonalTheme.showInApp ?? true;
+
         return MaterialApp(
           title: 'UB Mart',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.buildDynamicTheme(dynamicColor),
-          home: const MainNavigationScreen(),
+          home: showInApp 
+            ? SeasonalOverlay(
+                seasonMode: seasonMode,
+                intensity: intensity,
+                child: const MainNavigationScreen(),
+              )
+            : const MainNavigationScreen(),
         );
       },
     );
