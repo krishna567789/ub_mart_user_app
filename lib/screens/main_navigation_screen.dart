@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
-import 'home_screen.dart';
+import 'home/home_screen.dart';
 import 'categories_screen.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';

@@ -5,12 +5,11 @@ class ApiConfig {
 
   static String get baseUrl {
     if (customBaseUrl.isNotEmpty) return customBaseUrl;
-    if (kIsWeb) return "http://localhost:3000/api";
-    // Default Android Emulator IP connecting to host localhost:3000
-    return "http://10.0.2.2:3000/api";
+    if (kIsWeb) return "https://ubmart-admin.vercel.app/api";
+    return "https://ubmart-admin.vercel.app/api";
   }
 
-  static String defaultStoreId = "";
+  static String defaultStoreId = "6a9bc0af2b4db103cebe7c04";
 
   static Map<String, String> headers({String? storeId}) {
     final Map<String, String> headers = {

@@ -1,7 +1,7 @@
 class CouponModel {
   final String id;
   final String code;
-  final String discountType; // PERCENTAGE, FLAT
+  final String discountType;
   final double discountValue;
   final double maxDiscountAmount;
   final double minOrderValue;

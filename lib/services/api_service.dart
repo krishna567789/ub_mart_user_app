@@ -1,52 +1,86 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/api_config.dart';
+import '../utils/api_constants.dart';
 
 class ApiService {
-  final http.Client client;
+  final http.Client _client = http.Client();
+  
+  String? _storeId;
+  String? _authToken;
 
-  ApiService({http.Client? client}) : client = client ?? http.Client();
+  void setStoreId(String storeId) {
+    _storeId = storeId;
+  }
+
+  void setAuthToken(String token) {
+    _authToken = token;
+  }
+
+  Map<String, String> _getHeaders(String? customStoreId) {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    final finalStoreId = customStoreId ?? _storeId;
+    if (finalStoreId != null) {
+      headers['x-store-id'] = finalStoreId;
+    }
+    
+    if (_authToken != null) {
+      headers['Authorization'] = 'Bearer $_authToken';
+    }
+    
+    return headers;
+  }
 
   Future<dynamic> get(String endpoint, {String? storeId, Map<String, String>? queryParams}) async {
-    Uri uri = Uri.parse("${ApiConfig.baseUrl}$endpoint");
+    Uri url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     if (queryParams != null && queryParams.isNotEmpty) {
-      uri = uri.replace(queryParameters: queryParams);
+      url = url.replace(queryParameters: queryParams);
     }
+    
+    final headers = _getHeaders(storeId);
+    print("API GET URL: $url");
+    print("API GET HEADERS: $headers");
 
-    final headers = ApiConfig.headers(storeId: storeId);
-    final response = await client.get(uri, headers: headers);
-    return _handleResponse(response);
+    try {
+      final response = await _client.get(url, headers: headers);
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
   }
 
-  Future<dynamic> post(String endpoint, {required Map<String, dynamic> body, String? storeId}) async {
-    final uri = Uri.parse("${ApiConfig.baseUrl}$endpoint");
-    final headers = ApiConfig.headers(storeId: storeId);
-    final response = await client.post(uri, headers: headers, body: jsonEncode(body));
-    return _handleResponse(response);
+  Future<dynamic> post(String endpoint, {Map<String, dynamic>? body, String? storeId}) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final response = await _client.post(
+        url,
+        headers: _getHeaders(storeId),
+        body: body != null ? jsonEncode(body) : null,
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
   }
 
-  Future<dynamic> put(String endpoint, {required Map<String, dynamic> body, String? storeId}) async {
-    final uri = Uri.parse("${ApiConfig.baseUrl}$endpoint");
-    final headers = ApiConfig.headers(storeId: storeId);
-    final response = await client.put(uri, headers: headers, body: jsonEncode(body));
-    return _handleResponse(response);
-  }
-
-  dynamic _handleResponse(http.Response response) {
+  dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) return null;
-      return jsonDecode(response.body);
-    } else {
-      dynamic errorBody;
-      try {
-        errorBody = jsonDecode(response.body);
-      } catch (_) {
-        errorBody = response.body;
+      if (response.body.isNotEmpty) {
+        return jsonDecode(response.body);
       }
-      final msg = (errorBody is Map && errorBody.containsKey('error'))
-          ? errorBody['error']
-          : "Server Error (${response.statusCode})";
-      throw Exception(msg);
+      return null;
+    } else {
+      String message = 'Unknown error occurred';
+      try {
+        final errorData = jsonDecode(response.body);
+        message = errorData['error'] ?? message;
+      } catch (_) {}
+      throw Exception('API Error (${response.statusCode}): $message');
     }
   }
 }
+
+final apiService = ApiService();

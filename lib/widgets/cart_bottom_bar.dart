@@ -2,18 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
-
 class CartBottomBar extends StatelessWidget {
   final VoidCallback onTap;
-
   const CartBottomBar({super.key, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
-
     if (cart.itemCount == 0) return const SizedBox.shrink();
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
