@@ -23,7 +23,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final storeProvider = Provider.of<StoreProvider>(context, listen: false);
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
-
       final storeId = storeProvider.selectedStore?.id ?? '';
       if (storeId.isNotEmpty) {
         productProvider.fetchCategories(storeId);
