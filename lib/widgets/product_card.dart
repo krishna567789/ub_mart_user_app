@@ -40,20 +40,22 @@ class _ProductCardState extends State<ProductCard> {
         ? (((origPrice - price) / origPrice) * 100).round()
         : 0;
 
+    final primaryColor = Theme.of(context).primaryColor;
+
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        width: 160,
+        width: 155,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -64,19 +66,20 @@ class _ProductCardState extends State<ProductCard> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   child: Container(
                     height: 110,
                     width: double.infinity,
-                    color: Colors.grey.shade50,
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(12),
                     child: widget.product.images.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: widget.product.images.first,
                             fit: BoxFit.contain,
-                            placeholder: (ctx, url) => const Center(
+                            placeholder: (ctx, url) => Center(
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: AppTheme.primary,
+                                color: primaryColor,
                               ),
                             ),
                             errorWidget: (ctx, url, err) => const Icon(
@@ -87,196 +90,183 @@ class _ProductCardState extends State<ProductCard> {
                         : const Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 40),
                   ),
                 ),
+
+                // Top Left Discount Badge (Lightning Deals style)
                 if (hasDiscount)
                   Positioned(
-                    top: 6,
-                    left: 6,
+                    top: 0,
+                    left: 0,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade700,
-                        borderRadius: BorderRadius.circular(4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF9800), // Orange badge like the design
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(10),
+                        ),
                       ),
                       child: Text(
                         "$discountPercent% OFF",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
                   ),
 
-                if (widget.product.badge != null && widget.product.badge!.isNotEmpty)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        widget.product.badge!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                // Top Right Dummy Favorite Icon
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Icon(Icons.favorite_border, color: Colors.grey.shade400, size: 18),
+                ),
               ],
             ),
 
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product Name
-                  Text(
-                    widget.product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Variant selector dropdown if multiple variants
-                  if (widget.product.variants.length > 1)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Brand / Category Tag
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      margin: const EdgeInsets.only(bottom: 6),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<ProductVariantModel>(
-                          value: _selectedVariant,
-                          isDense: true,
-                          style: const TextStyle(fontSize: 11, color: Colors.black87),
-                          items: widget.product.variants.map((v) {
-                            return DropdownMenuItem<ProductVariantModel>(
-                              value: v,
-                              child: Text(v.size),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedVariant = val;
-                              });
-                            }
-                          },
+                      child: Text(
+                        widget.product.brand ?? "Organic Farm",
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    )
-                  else
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        _selectedVariant.size,
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 6),
+
+                    // Product Name
+                    Text(
+                      widget.product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1C1C1C),
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Size / Variant Text
+                    Text(
+                      _selectedVariant.size,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
 
-                  // Price and Add / Qty controller
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "₹${price.toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-                          if (hasDiscount)
-                            Text(
-                              "₹${origPrice.toStringAsFixed(0)}",
-                              style: const TextStyle(
-                                fontSize: 10,
-                                decoration: TextDecoration.lineThrough,
-                                color: Colors.grey,
-                              ),
-                            ),
-                        ],
-                      ),
+                    const Spacer(),
 
-                      // Add / Quantity Controller
-                      qty == 0
-                          ? InkWell(
-                              onTap: () {
-                                cart.addItem(widget.product, _selectedVariant);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryLight,
-                                  border: Border.all(color: AppTheme.primary),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  "ADD",
-                                  style: TextStyle(
-                                    color: AppTheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: AppTheme.primary,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                children: [
-                                  InkWell(
-                                    onTap: () {
-                                      cart.removeItem(widget.product.id, _selectedVariant.size);
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                      child: Icon(Icons.remove, color: Colors.white, size: 16),
-                                    ),
-                                  ),
-                                  Text(
-                                    "$qty",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      cart.addItem(widget.product, _selectedVariant);
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                      child: Icon(Icons.add, color: Colors.white, size: 16),
-                                    ),
-                                  ),
-                                ],
+                    // Price & Add Button Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "₹${price.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF1C1C1C),
                               ),
                             ),
-                    ],
-                  ),
-                ],
+                            if (hasDiscount)
+                              Text(
+                                "₹${origPrice.toStringAsFixed(0)}",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: Colors.grey.shade400,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        // Green Add Button
+                        qty == 0
+                            ? InkWell(
+                                onTap: () {
+                                  cart.addItem(widget.product, _selectedVariant);
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor, // Standard Green Add Button
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    "+ ADD",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    InkWell(
+                                      onTap: () {
+                                        cart.removeItem(widget.product.id, _selectedVariant.size);
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                        child: Icon(Icons.remove, color: Colors.white, size: 14),
+                                      ),
+                                    ),
+                                    Text(
+                                      "$qty",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () {
+                                        cart.addItem(widget.product, _selectedVariant);
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                        child: Icon(Icons.add, color: Colors.white, size: 14),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
