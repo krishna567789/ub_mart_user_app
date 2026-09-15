@@ -24,7 +24,11 @@ class ApiService {
       'Accept': 'application/json',
     };
     
-    final finalStoreId = customStoreId ?? _storeId ?? ApiConfig.defaultStoreId;
+    final finalStoreId = (customStoreId != null && customStoreId.isNotEmpty)
+        ? customStoreId
+        : (_storeId != null && _storeId!.isNotEmpty)
+            ? _storeId!
+            : ApiConfig.defaultStoreId;
     if (finalStoreId.isNotEmpty) {
       headers['x-store-id'] = finalStoreId;
     }

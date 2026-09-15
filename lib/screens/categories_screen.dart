@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/main_category_model.dart';
 import '../models/category_model.dart';
-import '../models/sub_category_model.dart';
 import '../providers/store_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/custom_text.dart';
 import '../widgets/smart_image.dart';
 import '../widgets/cart_bottom_bar.dart';
+import '../widgets/shimmer_loaders.dart';
 import '../utils/app_sizes.dart';
 import 'product_list_screen.dart';
 
@@ -56,7 +56,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   Future<void> _loadCategories() async {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     final storeId = storeProvider.selectedStore?.id ?? '';
     await productProvider.fetchMainCategoriesTree(storeId);
   }
@@ -80,9 +83,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     if (_searchQuery.isNotEmpty) {
       displayMainCategories = displayMainCategories.where((m) {
         final matchesMain = m.name.toLowerCase().contains(_searchQuery);
-        final matchesCat = m.categories.any((c) =>
-            c.name.toLowerCase().contains(_searchQuery) ||
-            c.subCategories.any((s) => s.name.toLowerCase().contains(_searchQuery)));
+        final matchesCat = m.categories.any(
+          (c) =>
+              c.name.toLowerCase().contains(_searchQuery) ||
+              c.subCategories.any(
+                (s) => s.name.toLowerCase().contains(_searchQuery),
+              ),
+        );
         return matchesMain || matchesCat;
       }).toList();
     }
@@ -97,9 +104,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         centerTitle: false,
         elevation: 0,
       ),
-      bottomNavigationBar: CartBottomBar(
-        onTap: () {},
-      ),
+      bottomNavigationBar: CartBottomBar(onTap: () {}),
       body: Column(
         children: [
           // ── Top Header Search Bar & Filter Chips ──
@@ -126,10 +131,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 Container(
                   height: context.r(42),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(context.r(12)),
                     border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+                      color: isDark
+                          ? const Color(0xFF334155)
+                          : Colors.grey.shade200,
                     ),
                   ),
                   child: TextField(
@@ -156,7 +165,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: context.r(10)),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: context.r(10),
+                      ),
                     ),
                   ),
                 ),
@@ -170,7 +181,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       scrollDirection: Axis.horizontal,
                       children: [
                         _buildFilterChip('All', isDark, primaryColor),
-                        ...mainCategories.map((m) => _buildFilterChip(m.name, isDark, primaryColor)),
+                        ...mainCategories.map(
+                          (m) => _buildFilterChip(m.name, isDark, primaryColor),
+                        ),
                       ],
                     ),
                   ),
@@ -187,20 +200,20 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               child: productProvider.isLoading && mainCategories.isEmpty
                   ? _buildSkeletonLoader(context, isDark)
                   : displayMainCategories.isEmpty
-                      ? _buildEmptyState(context, isDark, storeProvider)
-                      : ListView.builder(
-                          padding: EdgeInsets.symmetric(vertical: context.r(8)),
-                          itemCount: displayMainCategories.length,
-                          itemBuilder: (context, index) {
-                            final mainCat = displayMainCategories[index];
-                            return _buildMainCategorySection(
-                              context,
-                              mainCat,
-                              isDark,
-                              primaryColor,
-                            );
-                          },
-                        ),
+                  ? _buildEmptyState(context, isDark, storeProvider)
+                  : ListView.builder(
+                      padding: EdgeInsets.symmetric(vertical: context.r(8)),
+                      itemCount: displayMainCategories.length,
+                      itemBuilder: (context, index) {
+                        final mainCat = displayMainCategories[index];
+                        return _buildMainCategorySection(
+                          context,
+                          mainCat,
+                          isDark,
+                          primaryColor,
+                        );
+                      },
+                    ),
             ),
           ),
         ],
@@ -228,7 +241,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
           borderRadius: BorderRadius.circular(context.r(16)),
           border: Border.all(
-            color: isSelected ? primaryColor : (isDark ? const Color(0xFF334155) : Colors.grey.shade300),
+            color: isSelected
+                ? primaryColor
+                : (isDark ? const Color(0xFF334155) : Colors.grey.shade300),
           ),
         ),
         child: Center(
@@ -236,7 +251,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             label,
             fontSize: 10,
             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-            color: isSelected ? Colors.white : (isDark ? Colors.white70 : const Color(0xFF475569)),
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : const Color(0xFF475569)),
           ),
         ),
       ),
@@ -249,8 +266,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     bool isDark,
     Color primaryColor,
   ) {
-    final bool hasSubCategories = mainCat.categories.any((c) => c.subCategories.isNotEmpty);
-
     return Container(
       margin: EdgeInsets.only(bottom: context.r(12)),
       child: Column(
@@ -280,9 +295,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProductListScreen(
-                          title: mainCat.name,
-                        ),
+                        builder: (_) => ProductListScreen(title: mainCat.name),
                       ),
                     );
                   },
@@ -307,165 +320,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ),
 
-          // ── Render Category / Subcategory Grid ──
+          // ── Direct 4-Column GridView of Categories under this Main Category ──
           if (mainCat.categories.isEmpty)
             _buildEmptyCategorySection(context, isDark, mainCat, primaryColor)
-          else if (hasSubCategories)
-            ...mainCat.categories.map((cat) => _buildCategorySubSection(context, cat, isDark, primaryColor))
           else
-            _buildDirectCategoryGrid(context, mainCat.categories, isDark, primaryColor),
+            _buildDirectCategoryGrid(
+              context,
+              mainCat.categories,
+              isDark,
+              primaryColor,
+            ),
         ],
       ),
-    );
-  }
-
-  Widget _buildCategorySubSection(
-    BuildContext context,
-    CategoryModel cat,
-    bool isDark,
-    Color primaryColor,
-  ) {
-    final displaySubs = _searchQuery.isEmpty
-        ? cat.subCategories
-        : cat.subCategories.where((s) => s.name.toLowerCase().contains(_searchQuery)).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Category Sub-header (e.g., Fresh Fruits >)
-        Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.r(16),
-            vertical: context.r(4),
-          ),
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProductListScreen(
-                    title: cat.name,
-                    categoryId: cat.id,
-                  ),
-                ),
-              );
-            },
-            child: Row(
-              children: [
-                if (cat.image.isNotEmpty) ...[
-                  Container(
-                    width: context.r(22),
-                    height: context.r(22),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: primaryColor.withValues(alpha: 0.1),
-                    ),
-                    child: ClipOval(
-                      child: SmartImage(imageUrl: cat.image, fit: BoxFit.cover),
-                    ),
-                  ),
-                  SizedBox(width: context.r(6)),
-                ],
-                CustomText(
-                  cat.name,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white70 : const Color(0xFF1E293B),
-                ),
-                SizedBox(width: context.r(4)),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: context.r(16),
-                  color: isDark ? Colors.white38 : Colors.grey.shade400,
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // GridView with crossAxisCount: 4 for subcategories
-        displaySubs.isEmpty
-            ? const SizedBox.shrink()
-            : GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.r(16),
-                  vertical: context.r(6),
-                ),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: context.r(12),
-                  crossAxisSpacing: context.r(10),
-                  childAspectRatio: 0.72,
-                ),
-                itemCount: displaySubs.length,
-                itemBuilder: (context, index) {
-                  final sc = displaySubs[index];
-                  final color = _cardColors[index % _cardColors.length];
-
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProductListScreen(
-                            title: sc.name,
-                            categoryId: cat.id,
-                            subCategoryId: sc.id,
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(context.r(14)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Soft Pastel Card
-                        AspectRatio(
-                          aspectRatio: 1.0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isDark ? color.withValues(alpha: 0.18) : color,
-                              borderRadius: BorderRadius.circular(context.r(14)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            padding: EdgeInsets.all(context.r(8)),
-                            child: Center(
-                              child: SmartImage(
-                                imageUrl: sc.image,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: context.r(5)),
-
-                        // Subcategory Title
-                        Expanded(
-                          child: CustomText(
-                            sc.name,
-                            maxLines: 2,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white70 : const Color(0xFF334155),
-                            height: 1.15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-      ],
     );
   }
 
@@ -477,7 +343,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   ) {
     final displayCats = _searchQuery.isEmpty
         ? categories
-        : categories.where((c) => c.name.toLowerCase().contains(_searchQuery)).toList();
+        : categories
+              .where((c) => c.name.toLowerCase().contains(_searchQuery))
+              .toList();
 
     return GridView.builder(
       shrinkWrap: true,
@@ -502,10 +370,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ProductListScreen(
-                  title: cat.name,
-                  categoryId: cat.id,
-                ),
+                builder: (_) =>
+                    ProductListScreen(title: cat.name, categoryId: cat.id),
               ),
             );
           },
@@ -522,7 +388,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     borderRadius: BorderRadius.circular(context.r(14)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.2 : 0.03,
+                        ),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -530,10 +398,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   ),
                   padding: EdgeInsets.all(context.r(8)),
                   child: Center(
-                    child: SmartImage(
-                      imageUrl: cat.image,
-                      fit: BoxFit.contain,
-                    ),
+                    child: SmartImage(imageUrl: cat.image, fit: BoxFit.contain),
                   ),
                 ),
               ),
@@ -566,7 +431,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     Color primaryColor,
   ) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: context.r(12), horizontal: context.r(16)),
+      padding: EdgeInsets.symmetric(
+        vertical: context.r(12),
+        horizontal: context.r(16),
+      ),
       child: Row(
         children: [
           Icon(Icons.shopping_bag_outlined, size: 18, color: primaryColor),
@@ -587,7 +455,11 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 ),
               );
             },
-            child: const CustomText("Explore", fontSize: 12, fontWeight: FontWeight.w700),
+            child: const CustomText(
+              "Explore",
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -595,61 +467,67 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Widget _buildSkeletonLoader(BuildContext context, bool isDark) {
-    return ListView.builder(
-      padding: EdgeInsets.all(context.r(16)),
-      itemCount: 3,
-      itemBuilder: (_, __) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: context.r(140),
-            height: context.r(18),
-            margin: EdgeInsets.only(bottom: context.r(12)),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(4),
+    return AdaptiveShimmer(
+      child: ListView.builder(
+        padding: EdgeInsets.all(context.r(16)),
+        itemCount: 3,
+        itemBuilder: (_, __) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: context.r(140),
+              height: context.r(18),
+              margin: EdgeInsets.only(bottom: context.r(12)),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
-          ),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: context.r(10),
-              mainAxisSpacing: context.r(12),
-              childAspectRatio: 0.72,
-            ),
-            itemCount: 4,
-            itemBuilder: (_, __) => Column(
-              children: [
-                AspectRatio(
-                  aspectRatio: 1.0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(context.r(14)),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: context.r(10),
+                mainAxisSpacing: context.r(12),
+                childAspectRatio: 0.72,
+              ),
+              itemCount: 4,
+              itemBuilder: (_, __) => Column(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(context.r(14)),
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(height: context.r(6)),
-                Container(
-                  width: context.r(45),
-                  height: context.r(10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(4),
+                  SizedBox(height: context.r(6)),
+                  Container(
+                    width: context.r(45),
+                    height: context.r(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: context.r(20)),
-        ],
+            SizedBox(height: context.r(20)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, bool isDark, StoreProvider storeProvider) {
+  Widget _buildEmptyState(
+    BuildContext context,
+    bool isDark,
+    StoreProvider storeProvider,
+  ) {
     return Center(
       child: Padding(
         padding: EdgeInsets.all(context.r(24)),
@@ -659,7 +537,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             Container(
               padding: EdgeInsets.all(context.r(20)),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                color: isDark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFF1F5F9),
                 shape: BoxShape.circle,
               ),
               child: Icon(

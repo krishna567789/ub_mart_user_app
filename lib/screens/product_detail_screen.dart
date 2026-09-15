@@ -6,6 +6,7 @@ import '../models/product_model.dart';
 import '../providers/cart_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
+import '../widgets/shimmer_loaders.dart';
 import '../utils/cart_animation_helper.dart';
 import 'cart_screen.dart';
 
@@ -793,10 +794,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 12),
 
                   if (_isLoadingSimilar)
-                    const SizedBox(
-                      height: 220,
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    )
+                    const ProductHorizontalShimmer()
                   else if (_similarProducts.isEmpty)
                     const SizedBox.shrink()
                   else

@@ -69,6 +69,9 @@ class ProductProvider with ChangeNotifier {
   }
 
   Future<void> fetchSubCategories(String storeId, {String? categoryId}) async {
+    _subCategories = [];
+    notifyListeners();
+
     try {
       if (categoryId != null && categoryId.isNotEmpty && _categories.isNotEmpty) {
         final matches = _categories.where((c) => c.id == categoryId).toList();

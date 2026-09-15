@@ -4,6 +4,7 @@ import '../providers/store_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/shimmer_loaders.dart';
 import 'login_screen.dart';
 import 'order_tracking_screen.dart';
 
@@ -144,7 +145,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         ],
       ),
       body: orderProvider.isLoading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const OrderHistoryShimmer()
           : orderProvider.userOrders.isEmpty
               ? Center(
                   child: Column(
