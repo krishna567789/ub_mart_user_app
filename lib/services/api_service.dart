@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../utils/api_constants.dart';
+import '../config/api_config.dart';
 
 class ApiService {
   final http.Client _client = http.Client();
@@ -22,8 +23,8 @@ class ApiService {
       'Accept': 'application/json',
     };
     
-    final finalStoreId = customStoreId ?? _storeId;
-    if (finalStoreId != null) {
+    final finalStoreId = customStoreId ?? _storeId ?? ApiConfig.defaultStoreId;
+    if (finalStoreId.isNotEmpty) {
       headers['x-store-id'] = finalStoreId;
     }
     
@@ -41,8 +42,6 @@ class ApiService {
     }
     
     final headers = _getHeaders(storeId);
-    print("API GET URL: $url");
-    print("API GET HEADERS: $headers");
 
     try {
       final response = await _client.get(url, headers: headers);
@@ -60,6 +59,47 @@ class ApiService {
         headers: _getHeaders(storeId),
         body: body != null ? jsonEncode(body) : null,
       );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  Future<dynamic> put(String endpoint, {Map<String, dynamic>? body, String? storeId}) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final response = await _client.put(
+        url,
+        headers: _getHeaders(storeId),
+        body: body != null ? jsonEncode(body) : null,
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body, String? storeId}) async {
+    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final response = await _client.patch(
+        url,
+        headers: _getHeaders(storeId),
+        body: body != null ? jsonEncode(body) : null,
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Network error: $e');
+    }
+  }
+
+  Future<dynamic> delete(String endpoint, {String? storeId, Map<String, String>? queryParams}) async {
+    Uri url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      url = url.replace(queryParameters: queryParams);
+    }
+    try {
+      final response = await _client.delete(url, headers: _getHeaders(storeId));
       return _processResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');

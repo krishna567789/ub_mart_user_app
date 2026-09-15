@@ -6,6 +6,7 @@ import '../models/store_model.dart';
 class StorageService {
   static const String keySelectedStore = 'selected_store';
   static const String keyUser = 'user_data';
+  static const String keyAuthToken = 'auth_token';
 
   static Future<void> saveSelectedStore(StoreModel store) async {
     final prefs = await SharedPreferences.getInstance();
@@ -42,5 +43,16 @@ class StorageService {
   static Future<void> clearUser() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(keyUser);
+    await prefs.remove(keyAuthToken);
+  }
+
+  static Future<void> saveAuthToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyAuthToken, token);
+  }
+
+  static Future<String?> getAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyAuthToken);
   }
 }

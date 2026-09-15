@@ -273,7 +273,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   Text(
                     "₹${cart.grandTotal.toStringAsFixed(0)}",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.primaryDark),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.primaryDark),
                   ),
                 ],
               ),

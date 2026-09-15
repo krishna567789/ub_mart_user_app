@@ -70,6 +70,7 @@ class OrderModel {
   final String status; // PENDING, ACCEPTED, PACKING, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
   final String paymentMethod; // COD, ONLINE, WALLET
   final String paymentStatus; // PENDING, PAID, FAILED
+  final Map<String, dynamic>? assignedRider;
   final DateTime? createdAt;
 
   OrderModel({
@@ -88,6 +89,7 @@ class OrderModel {
     required this.status,
     required this.paymentMethod,
     required this.paymentStatus,
+    this.assignedRider,
     this.createdAt,
   });
 

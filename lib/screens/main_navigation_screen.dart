@@ -37,6 +37,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
     final primaryColor = Theme.of(context).primaryColor;
+    final isLight = Theme.of(context).brightness == Brightness.light;
 
     return Scaffold(
       body: IndexedStack(
@@ -45,12 +46,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF13151A), // Premium Dark Bottom Bar
+          color: isLight ? Colors.white : const Color(0xFF13151A),
+          border: Border(
+            top: BorderSide(
+              color: isLight ? Colors.grey.shade200 : Colors.white10,
+              width: 1,
+            ),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withOpacity(isLight ? 0.05 : 0.2),
               blurRadius: 10,
-              offset: const Offset(0, -5),
+              offset: const Offset(0, -3),
             ),
           ],
         ),
@@ -65,7 +72,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           selectedItemColor: primaryColor, // Dynamic neon primary
-          unselectedItemColor: Colors.grey.shade500,
+          unselectedItemColor: isLight ? Colors.grey.shade600 : Colors.grey.shade500,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontSize: 10),
           items: [

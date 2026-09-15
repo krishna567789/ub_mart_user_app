@@ -1,6 +1,48 @@
 import 'product.dart';
 import 'category.dart';
 
+class BestsellerItem {
+  final Category category;
+  final List<Product> products;
+
+  BestsellerItem({required this.category, required this.products});
+
+  factory BestsellerItem.fromJson(Map<String, dynamic> json) {
+    Category cat;
+    try {
+      final catRaw = json['categoryId'] ?? json['category'];
+      if (catRaw is Map<String, dynamic>) {
+        cat = Category.fromJson(catRaw);
+      } else if (catRaw is Map) {
+        cat = Category.fromJson(Map<String, dynamic>.from(catRaw));
+      } else {
+        cat = Category(
+          id: catRaw?.toString() ?? '',
+          name: 'Category',
+          image: '',
+          isActive: true,
+        );
+      }
+    } catch (_) {
+      cat = Category(id: '', name: 'Category', image: '', isActive: true);
+    }
+
+    final List<Product> parsedProducts = [];
+    final rawProducts = json['productIds'] ?? json['products'];
+    if (rawProducts is List) {
+      for (final e in rawProducts) {
+        if (e is Map<String, dynamic>) {
+          try { parsedProducts.add(Product.fromJson(e)); } catch (_) {}
+        } else if (e is Map) {
+          try { parsedProducts.add(Product.fromJson(Map<String, dynamic>.from(e))); } catch (_) {}
+        }
+      }
+    }
+
+    return BestsellerItem(category: cat, products: parsedProducts);
+  }
+}
+
 class HomepageBanner {
   final String imageUrl;
   final String linkType;
@@ -32,6 +74,8 @@ class HomepageSection {
   final List<Category> categories;
   final List<Product> products;
   final String offerText;
+  final Map<String, dynamic> metadata;
+  final List<BestsellerItem> bestsellerItems;
 
   HomepageSection({
     required this.id,
@@ -44,6 +88,8 @@ class HomepageSection {
     required this.categories,
     required this.products,
     required this.offerText,
+    required this.metadata,
+    required this.bestsellerItems,
   });
 
   factory HomepageSection.fromJson(Map<String, dynamic> json) {
@@ -68,6 +114,11 @@ class HomepageSection {
               .toList() ??
           [],
       offerText: json['offerText'] ?? '',
+      metadata: json['metadata'] as Map<String, dynamic>? ?? {},
+      bestsellerItems: (json['bestsellerItems'] as List<dynamic>?)
+              ?.map((e) => BestsellerItem.fromJson(e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}))
+              .toList() ??
+          [],
     );
   }
 }

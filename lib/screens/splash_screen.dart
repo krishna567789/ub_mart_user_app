@@ -56,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.shopping_cart_outlined,
                 size: 60,
                 color: AppTheme.primary,

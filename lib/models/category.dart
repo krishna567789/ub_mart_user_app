@@ -1,6 +1,7 @@
 class Category {
   final String id;
   final String name;
+  final String? subtitle;
   final String? description;
   final String image;
   final bool isActive;
@@ -9,6 +10,7 @@ class Category {
   Category({
     required this.id,
     required this.name,
+    this.subtitle,
     this.description,
     required this.image,
     required this.isActive,
@@ -19,6 +21,7 @@ class Category {
     return Category(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
+      subtitle: json['subtitle'],
       description: json['description'],
       image: json['image'] ?? 'https://via.placeholder.com/150',
       isActive: json['isActive'] ?? true,

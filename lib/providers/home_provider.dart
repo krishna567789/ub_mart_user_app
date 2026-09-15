@@ -15,17 +15,36 @@ class HomeProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final response = await apiService.get(ApiConstants.homepage);
-      print("HOMEPAGE RESPONSE TYPE: ${response.runtimeType}");
-      print("HOMEPAGE RESPONSE: $response");
+      final futures = await Future.wait([
+        apiService.get(ApiConstants.homepage),
+        apiService.get(ApiConstants.mainCategories),
+        apiService.get(ApiConstants.categories), // Fetch subcategories as fallback
+      ]);
 
-      if (response != null && response is List) {
-        sections = response.map((e) => HomepageSection.fromJson(e)).toList();
-        print("PARSED SECTIONS COUNT: ${sections.length}");
-      } else {
-        error =
-            "Response is not a list! Type: ${response.runtimeType}, Data: $response";
+      final homepageResponse = futures[0];
+      final mainCatsResponse = futures[1];
+      final categoriesResponse = futures[2];
+
+      List<Category> fallbackCategories = [];
+      if (categoriesResponse != null && categoriesResponse is List) {
+        fallbackCategories = categoriesResponse.map((e) => Category.fromJson(e)).toList();
       }
+
+      if (homepageResponse != null && homepageResponse is List) {
+        sections = homepageResponse.map((e) => HomepageSection.fromJson(e)).toList();
+        
+        // Fix for Vercel API cache returning empty categoryIds
+        for (var section in sections) {
+          if (section.type == 'CATEGORY_GRID' && section.categories.isEmpty) {
+            section.categories.addAll(fallbackCategories);
+          }
+        }
+      }
+
+      if (mainCatsResponse != null && mainCatsResponse is List) {
+        mainCategories = mainCatsResponse.map((e) => Category.fromJson(e)).toList();
+      }
+
     } catch (e, stacktrace) {
       error = e.toString();
       print("ERROR PARSING HOMEPAGE: $e\n$stacktrace");

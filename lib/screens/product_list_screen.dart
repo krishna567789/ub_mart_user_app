@@ -5,36 +5,61 @@ import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/product_card.dart';
 import '../widgets/cart_bottom_bar.dart';
-import 'product_detail_screen.dart';
 import 'cart_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   final String title;
   final String? subCategoryId;
+  final String? categoryId;
+  final String? initialSearch;
 
   const ProductListScreen({
-    Key? key,
+    super.key,
     required this.title,
     this.subCategoryId,
-  }) : super(key: key);
+    this.categoryId,
+    this.initialSearch,
+  });
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
 }
 
 class _ProductListScreenState extends State<ProductListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
+    if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
+      _searchController.text = widget.initialSearch!;
+      _isSearching = true;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-      final productProvider = Provider.of<ProductProvider>(context, listen: false);
-
-      final storeId = storeProvider.selectedStore?.id ?? '';
-      if (storeId.isNotEmpty) {
-        productProvider.fetchProducts(storeId, subCategoryId: widget.subCategoryId);
-      }
+      _loadProducts();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _loadProducts({String? query}) {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+
+    final storeId = storeProvider.selectedStore?.id ?? '';
+    if (storeId.isNotEmpty) {
+      productProvider.fetchProducts(
+        storeId,
+        subCategoryId: widget.subCategoryId,
+        categoryId: widget.categoryId,
+        search: query ?? (_searchController.text.isNotEmpty ? _searchController.text.trim() : null),
+      );
+    }
   }
 
   @override
@@ -43,10 +68,36 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: "Search products, brands...",
+                  border: InputBorder.none,
+                ),
+                onChanged: (val) => _loadProducts(query: val),
+              )
+            : Text(widget.title),
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _searchController.clear();
+                  _isSearching = false;
+                  _loadProducts(query: '');
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
+        ],
       ),
       body: productProvider.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : productProvider.products.isEmpty
               ? Center(
                   child: Column(
@@ -55,8 +106,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       const Icon(Icons.inventory_2_outlined, size: 60, color: Colors.grey),
                       const SizedBox(height: 12),
                       Text(
-                        "No products in ${widget.title}",
+                        "No products found",
                         style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => _loadProducts(),
+                        child: const Text("Refresh"),
                       ),
                     ],
                   ),
@@ -65,24 +121,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.72,
+                    childAspectRatio: 0.6,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
                   itemCount: productProvider.products.length,
                   itemBuilder: (context, index) {
                     final p = productProvider.products[index];
-                    return ProductCard(
-                      product: p,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProductDetailScreen(product: p),
-                          ),
-                        );
-                      },
-                    );
+                    return ProductCard(product: p);
                   },
                 ),
       bottomSheet: CartBottomBar(

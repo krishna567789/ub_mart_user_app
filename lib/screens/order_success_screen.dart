@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
 import 'main_navigation_screen.dart';
+import 'order_tracking_screen.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   final OrderModel order;
@@ -21,18 +22,18 @@ class OrderSuccessScreen extends StatelessWidget {
               Container(
                 width: 100,
                 height: 100,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppTheme.primaryLight,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_circle,
                   color: AppTheme.primary,
                   size: 70,
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
+              Text(
                 "Order Placed Successfully!",
                 style: TextStyle(
                   fontSize: 22,
@@ -43,14 +44,14 @@ class OrderSuccessScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 "Order ID: ${order.orderId}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.primary,
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 "Your order has been received and is being prepared by the store. Delivery in 10-15 minutes!",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
@@ -96,12 +97,11 @@ class OrderSuccessScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pushAndRemoveUntil(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const MainNavigationScreen(initialIndex: 3), // Navigate to Orders Tab
+                        builder: (_) => OrderTrackingScreen(order: order),
                       ),
-                      (route) => false,
                     );
                   },
                   child: const Text("TRACK ORDER"),

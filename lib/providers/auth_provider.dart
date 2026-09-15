@@ -4,7 +4,8 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  // Use the global apiService instance
+  // final ApiService _apiService = ApiService();
 
   UserModel? _user;
   bool _isLoading = false;
@@ -17,14 +18,44 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> loadSavedUser() async {
     _user = await StorageService.getUser();
+    final token = await StorageService.getAuthToken();
+    if (token != null) {
+      apiService.setAuthToken(token);
+    }
+    if (_user != null) {
+      // Refresh user details from backend in background
+      refreshUser();
+    }
     notifyListeners();
   }
 
-  // Quick Login / Sign up with Phone & Name
-  Future<bool> loginOrRegister({
-    required String name,
+  // Send OTP (Step 1)
+  Future<bool> sendOtp(String phone) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await apiService.post('/auth/send-otp', body: {'phone': phone});
+      if (response != null && response['success'] == true) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      throw Exception('Failed to send OTP.');
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Verify OTP (Step 2)
+  Future<bool> verifyOtp({
     required String phone,
-    String? email,
+    required String otp,
+    String? name,
     required String storeId,
   }) async {
     _isLoading = true;
@@ -32,68 +63,96 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Check if user already exists or create new user in /api/users
-      // In this backend, users are stored in User collection per storeId
-      final usersData = await _apiService.get('/users', storeId: storeId);
-      UserModel? existingUser;
+      final Map<String, dynamic> body = {
+        'phone': phone,
+        'otp': otp,
+        if (name != null && name.isNotEmpty) 'name': name,
+        'storeId': storeId,
+      };
 
-      if (usersData is List) {
-        for (var u in usersData) {
-          if (u['phone'] == phone) {
-            existingUser = UserModel.fromJson(u);
-            break;
-          }
+      final response = await apiService.post('/auth/verify-otp', body: body, storeId: storeId);
+
+      if (response != null && response['success'] == true && response['user'] != null) {
+        _user = UserModel.fromJson(response['user']);
+        await StorageService.saveUser(_user!);
+        
+        // Save Auth Token if provided
+        if (response['token'] != null) {
+          final token = response['token'];
+          apiService.setAuthToken(token);
+          await StorageService.saveAuthToken(token);
         }
-      }
 
-      if (existingUser != null) {
-        _user = existingUser;
+        _isLoading = false;
+        notifyListeners();
+        return true;
       } else {
-        // Register new user via backend create user or POST order / custom logic
-        // We simulate user record locally and save
-        _user = UserModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          storeId: storeId,
-          name: name,
-          phone: phone,
-          email: email,
-          walletBalance: 0.0,
-          addresses: [],
-        );
+        throw Exception(response?['error'] ?? 'Failed to verify OTP.');
       }
-
-      await StorageService.saveUser(_user!);
-      _isLoading = false;
-      notifyListeners();
-      return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
       _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
+  Future<void> refreshUser() async {
+    if (_user == null) return;
+    try {
+      final data = await apiService.get('/users/${_user!.id}');
+      if (data != null && data is Map<String, dynamic>) {
+        _user = UserModel.fromJson(data);
+        await StorageService.saveUser(_user!);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   Future<void> addAddress(AddressModel newAddress) async {
     if (_user == null) return;
 
-    final updatedAddresses = List<AddressModel>.from(_user!.addresses)..add(newAddress);
-    _user = UserModel(
-      id: _user!.id,
-      storeId: _user!.storeId,
-      name: _user!.name,
-      phone: _user!.phone,
-      email: _user!.email,
-      walletBalance: _user!.walletBalance,
-      addresses: updatedAddresses,
-    );
+    try {
+      // Persist to backend
+      await apiService.put(
+        '/users/${_user!.id}',
+        body: {'newAddress': newAddress.toJson()},
+        storeId: _user!.storeId,
+      );
 
-    await StorageService.saveUser(_user!);
-    notifyListeners();
+      final updatedAddresses = List<AddressModel>.from(_user!.addresses)..add(newAddress);
+      _user = UserModel(
+        id: _user!.id,
+        storeId: _user!.storeId,
+        name: _user!.name,
+        phone: _user!.phone,
+        email: _user!.email,
+        walletBalance: _user!.walletBalance,
+        addresses: updatedAddresses,
+      );
+
+      await StorageService.saveUser(_user!);
+      notifyListeners();
+    } catch (e) {
+      // Fallback local update
+      final updatedAddresses = List<AddressModel>.from(_user!.addresses)..add(newAddress);
+      _user = UserModel(
+        id: _user!.id,
+        storeId: _user!.storeId,
+        name: _user!.name,
+        phone: _user!.phone,
+        email: _user!.email,
+        walletBalance: _user!.walletBalance,
+        addresses: updatedAddresses,
+      );
+      await StorageService.saveUser(_user!);
+      notifyListeners();
+    }
   }
 
   Future<void> logout() async {
     _user = null;
+    apiService.setAuthToken('');
     await StorageService.clearUser();
     notifyListeners();
   }

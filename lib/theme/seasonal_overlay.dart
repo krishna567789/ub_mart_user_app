@@ -7,14 +7,14 @@ class SeasonalOverlay extends StatefulWidget {
   final String intensity;
 
   const SeasonalOverlay({
-    Key? key,
+    super.key,
     required this.child,
     required this.seasonMode,
     this.intensity = 'MEDIUM',
-  }) : super(key: key);
+  });
 
   @override
-  _SeasonalOverlayState createState() => _SeasonalOverlayState();
+  State<SeasonalOverlay> createState() => _SeasonalOverlayState();
 }
 
 class _SeasonalOverlayState extends State<SeasonalOverlay>
@@ -55,10 +55,24 @@ class _SeasonalOverlayState extends State<SeasonalOverlay>
     }
   }
 
+  String _resolveEffectiveSeason() {
+    final mode = widget.seasonMode.toUpperCase();
+    if (mode == 'NONE') return 'NONE';
+    if (mode == 'AUTO') {
+      final month = DateTime.now().month;
+      if (month == 10 || month == 11) return 'DIWALI';
+      if (month == 12 || month == 1 || month == 2) return 'WINTER';
+      if (month == 3 || month == 4) return 'SPRING';
+      if (month == 5 || month == 6) return 'SUMMER';
+      if (month >= 7 && month <= 9) return 'MONSOON';
+      return 'WINTER';
+    }
+    return mode;
+  }
+
   bool _shouldShowParticles() {
-    return widget.seasonMode != 'NONE' &&
-        widget.seasonMode != 'AUTO' &&
-        widget.seasonMode != 'SUMMER';
+    final effective = _resolveEffectiveSeason();
+    return effective != 'NONE';
   }
 
   void _initParticles() {
@@ -78,7 +92,8 @@ class _SeasonalOverlayState extends State<SeasonalOverlay>
   }
 
   String _getParticleType() {
-    switch (widget.seasonMode) {
+    final effective = _resolveEffectiveSeason();
+    switch (effective) {
       case 'WINTER':
       case 'CHRISTMAS':
         return 'SNOW';
@@ -88,6 +103,8 @@ class _SeasonalOverlayState extends State<SeasonalOverlay>
         return 'PETAL';
       case 'DIWALI':
         return 'SPARKLE';
+      case 'SUMMER':
+        return 'SUNSHINE';
       default:
         return 'SNOW';
     }
@@ -103,6 +120,8 @@ class _SeasonalOverlayState extends State<SeasonalOverlay>
   Widget build(BuildContext context) {
     if (!_shouldShowParticles()) return widget.child;
 
+    final effectiveSeason = _resolveEffectiveSeason();
+
     return Stack(
       children: [
         widget.child,
@@ -114,7 +133,7 @@ class _SeasonalOverlayState extends State<SeasonalOverlay>
                 painter: _SeasonalPainter(
                   particles: _particles,
                   progress: _controller.value,
-                  seasonMode: widget.seasonMode,
+                  seasonMode: effectiveSeason,
                 ),
                 child: Container(),
               );
@@ -162,8 +181,8 @@ class _SeasonalPainter extends CustomPainter {
       double currentY = (particle.y + (progress * particle.speed * 10)) % 1.0;
       double currentX = particle.x;
 
-      // Add a little horizontal sway for snow and petals
-      if (particle.type == 'SNOW' || particle.type == 'PETAL') {
+      // Add a little horizontal sway for snow, petals and sparkles
+      if (particle.type == 'SNOW' || particle.type == 'PETAL' || particle.type == 'SPARKLE') {
         currentX = (particle.x + sin(progress * pi * 2 + particle.y * 10) * 0.05) % 1.0;
       }
 
@@ -172,31 +191,42 @@ class _SeasonalPainter extends CustomPainter {
 
       switch (particle.type) {
         case 'SNOW':
-          paint.color = Colors.white.withOpacity(0.6);
+          paint.color = Colors.white.withValues(alpha: 0.65);
           canvas.drawCircle(Offset(px, py), particle.size, paint);
           break;
         case 'RAIN':
-          paint.color = Colors.blue.withOpacity(0.5);
+          paint.color = Colors.lightBlueAccent.withValues(alpha: 0.5);
           canvas.drawRect(
-              Rect.fromCenter(
-                  center: Offset(px, py),
-                  width: particle.size * 0.5,
-                  height: particle.size * 3),
-              paint);
+            Rect.fromCenter(
+              center: Offset(px, py),
+              width: particle.size * 0.4,
+              height: particle.size * 3.5,
+            ),
+            paint,
+          );
           break;
         case 'PETAL':
-          paint.color = Colors.pinkAccent.withOpacity(0.6);
+          paint.color = Colors.pinkAccent.withValues(alpha: 0.6);
           canvas.drawOval(
-              Rect.fromCenter(
-                  center: Offset(px, py),
-                  width: particle.size * 1.5,
-                  height: particle.size * 1.0),
-              paint);
+            Rect.fromCenter(
+              center: Offset(px, py),
+              width: particle.size * 1.5,
+              height: particle.size * 1.0,
+            ),
+            paint,
+          );
           break;
         case 'SPARKLE':
-          paint.color = Colors.amber.withOpacity(0.8);
-          // Draw a tiny star/sparkle
-          canvas.drawCircle(Offset(px, py), particle.size * 0.5, paint);
+          // Golden glowing sparkle for Diwali
+          paint.color = Colors.amber.withValues(alpha: 0.85);
+          canvas.drawCircle(Offset(px, py), particle.size * 0.8, paint);
+          paint.color = Colors.orangeAccent.withValues(alpha: 0.4);
+          canvas.drawCircle(Offset(px, py), particle.size * 1.6, paint);
+          break;
+        case 'SUNSHINE':
+          // Warm glowing sunbeam shimmer
+          paint.color = Colors.yellow.withValues(alpha: 0.4);
+          canvas.drawCircle(Offset(px, py), particle.size * 1.5, paint);
           break;
       }
     }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/store_provider.dart';
-import '../providers/home_provider.dart';
 import '../providers/product_provider.dart';
 import '../theme/app_theme.dart';
 import 'product_list_screen.dart';
@@ -21,48 +20,79 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-      final productProvider = Provider.of<ProductProvider>(context, listen: false);
-      final storeId = storeProvider.selectedStore?.id ?? '';
-      if (storeId.isNotEmpty) {
-        productProvider.fetchCategories(storeId);
-        productProvider.fetchSubCategories(storeId);
-      }
+      _loadCategories();
     });
+  }
+
+  Future<void> _loadCategories() async {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final storeId = storeProvider.selectedStore?.id ?? '';
+    if (storeId.isNotEmpty) {
+      await productProvider.fetchCategories(storeId);
+      if (productProvider.categories.isNotEmpty) {
+        await productProvider.fetchSubCategories(
+          storeId,
+          categoryId: productProvider.categories[_selectedIndex].id,
+        );
+      }
+    }
+  }
+
+  void _onCategorySelected(int index, String categoryId) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final storeId = storeProvider.selectedStore?.id ?? '';
+    if (storeId.isNotEmpty) {
+      productProvider.fetchSubCategories(storeId, categoryId: categoryId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final homeProvider = Provider.of<HomeProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
-
-    final mainCategories = homeProvider.mainCategories;
+    final categories = productProvider.categories;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("All Categories"),
         centerTitle: false,
       ),
-      body: mainCategories.isEmpty
-          ? const Center(child: Text("No Categories found"))
+      body: categories.isEmpty
+          ? Center(
+              child: productProvider.isLoading
+                  ? CircularProgressIndicator(color: AppTheme.primary)
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.category_outlined, size: 64, color: Colors.grey),
+                        const SizedBox(height: 12),
+                        const Text("No Categories found", style: TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: _loadCategories,
+                          child: const Text("Retry"),
+                        ),
+                      ],
+                    ),
+            )
           : Row(
               children: [
                 // Left Navigation Sidebar
                 Container(
-                  width: 100,
+                  width: 105,
                   color: Colors.grey.shade100,
                   child: ListView.builder(
-                    itemCount: mainCategories.length,
+                    itemCount: categories.length,
                     itemBuilder: (context, index) {
-                      final mc = mainCategories[index];
+                      final cat = categories[index];
                       final isSelected = _selectedIndex == index;
 
                       return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedIndex = index;
-                          });
-                        },
+                        onTap: () => _onCategorySelected(index, cat.id),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                           decoration: BoxDecoration(
@@ -84,16 +114,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                   color: Colors.grey.shade200,
                                 ),
                                 child: ClipOval(
-                                  child: CachedNetworkImage(
-                                    imageUrl: mc.image,
-                                    fit: BoxFit.cover,
-                                    errorWidget: (c, u, e) => const Icon(Icons.category, size: 20),
-                                  ),
+                                  child: cat.image.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: cat.image,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (c, u, e) => const Icon(Icons.category, size: 20),
+                                        )
+                                      : const Icon(Icons.category, size: 20),
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                mc.name,
+                                cat.name,
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -120,18 +152,59 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            mainCategories[_selectedIndex].name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                categories.isNotEmpty && _selectedIndex < categories.length
+                                    ? categories[_selectedIndex].name
+                                    : '',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  if (categories.isNotEmpty && _selectedIndex < categories.length) {
+                                    final cat = categories[_selectedIndex];
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ProductListScreen(
+                                          title: cat.name,
+                                          categoryId: cat.id,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text("View All"),
+                              ),
+                            ],
                           ),
                         ),
                         Expanded(
                           child: productProvider.subCategories.isEmpty
-                              ? const Center(child: Text("Select subcategory to explore items"))
+                              ? Center(
+                                  child: TextButton.icon(
+                                    onPressed: () {
+                                      final cat = categories[_selectedIndex];
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ProductListScreen(
+                                            title: cat.name,
+                                            categoryId: cat.id,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.shopping_bag_outlined),
+                                    label: const Text("Browse all products in category"),
+                                  ),
+                                )
                               : GridView.builder(
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -167,14 +240,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                             ),
                                             child: ClipRRect(
                                               borderRadius: BorderRadius.circular(10),
-                                              child: CachedNetworkImage(
-                                                imageUrl: sc.image,
-                                                fit: BoxFit.cover,
-                                                errorWidget: (c, u, e) => const Icon(
-                                                  Icons.shopping_basket_outlined,
-                                                  color: AppTheme.primary,
-                                                ),
-                                              ),
+                                              child: sc.image.isNotEmpty
+                                                  ? CachedNetworkImage(
+                                                      imageUrl: sc.image,
+                                                      fit: BoxFit.cover,
+                                                      errorWidget: (c, u, e) => Icon(
+                                                        Icons.shopping_basket_outlined,
+                                                        color: AppTheme.primary,
+                                                      ),
+                                                    )
+                                                  : Icon(
+                                                      Icons.shopping_basket_outlined,
+                                                      color: AppTheme.primary,
+                                                    ),
                                             ),
                                           ),
                                           const SizedBox(height: 6),

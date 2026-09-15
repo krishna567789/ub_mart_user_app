@@ -12,9 +12,11 @@ import 'theme/app_theme.dart';
 import 'theme/seasonal_overlay.dart';
 import 'services/api_service.dart';
 
+import 'config/api_config.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  apiService.setStoreId('6a9bc0af2b4db103cebe7c04');
+  apiService.setStoreId(ApiConfig.defaultStoreId);
   runApp(
     MultiProvider(
       providers: [
@@ -38,7 +40,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
-        final dynamicColor = settingsProvider.getPrimaryColor();
         final seasonMode = settingsProvider.settings?.seasonalTheme.mode ?? 'NONE';
         final intensity = settingsProvider.settings?.seasonalTheme.intensity ?? 'MEDIUM';
         final showInApp = settingsProvider.settings?.seasonalTheme.showInApp ?? true;

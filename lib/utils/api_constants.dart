@@ -1,5 +1,7 @@
+import '../config/api_config.dart';
+
 class ApiConstants {
-  static const String baseUrl = 'https://ubmart-admin.vercel.app/api';
+  static String get baseUrl => ApiConfig.baseUrl;
   static const String homepage = '/homepage';
   static const String products = '/products';
   static const String categories = '/categories';

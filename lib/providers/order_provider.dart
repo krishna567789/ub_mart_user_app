@@ -23,19 +23,43 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _apiService.get('/orders', storeId: storeId);
+      final res = await _apiService.get(
+        '/orders',
+        storeId: storeId,
+        queryParams: {'phone': phone},
+      );
       if (res is List) {
-        // Filter orders belonging to this user's phone number
-        _userOrders = res
-            .map((o) => OrderModel.fromJson(o))
-            .where((o) => o.customerPhone == phone)
-            .toList();
+        _userOrders = res.map((o) => OrderModel.fromJson(o)).toList();
       }
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> cancelOrder({required String orderId, required String storeId}) async {
+    try {
+      final res = await _apiService.patch(
+        '/orders/$orderId',
+        body: {'status': 'CANCELLED'},
+        storeId: storeId,
+      );
+      if (res != null) {
+        final index = _userOrders.indexWhere((o) => o.id == orderId || o.orderId == orderId);
+        if (index != -1) {
+          final updated = OrderModel.fromJson(res);
+          _userOrders[index] = updated;
+          notifyListeners();
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+      notifyListeners();
+      return false;
     }
   }
 
@@ -87,7 +111,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return newOrder;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception:', '').trim();
       _isLoading = false;
       notifyListeners();
       return null;

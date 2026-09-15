@@ -6,6 +6,7 @@ import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'location_select_screen.dart';
+import 'profile/address_book_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,51 +16,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  void _showApiUrlDialog(BuildContext context) {
-    final controller = TextEditingController(text: ApiConfig.baseUrl);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("API Base URL Setting"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Default Emulator: http://10.0.2.2:3000/api\nPhysical Device: http://<Your_WiFi_IP>:3000/api",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: "Base API URL",
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ApiConfig.customBaseUrl = controller.text.trim();
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("API Base URL set to ${ApiConfig.baseUrl}")),
-              );
-              Provider.of<StoreProvider>(context, listen: false).fetchStores();
-            },
-            child: const Text("Save & Reconnect"),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,25 +35,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // User Details Card
             if (authProvider.isLoggedIn && user != null)
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [AppTheme.primary, AppTheme.primaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6),
+                    BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
                   ],
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: AppTheme.primaryLight,
-                      child: Text(
-                        user.name.isNotEmpty ? user.name[0].toUpperCase() : "U",
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primary,
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                      ),
+                      child: CircleAvatar(
+                        radius: 35,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          user.name.isNotEmpty ? user.name[0].toUpperCase() : "U",
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -108,16 +75,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Text(
                             user.name,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
+                          const SizedBox(height: 4),
                           Text(
                             user.phone,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: const TextStyle(color: Colors.white70, fontSize: 14),
                           ),
                           if (user.email != null)
                             Text(
                               user.email!,
-                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                              style: const TextStyle(color: Colors.white70, fontSize: 13),
                             ),
                         ],
                       ),
@@ -134,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       "Log in to unlock saved addresses, wallet balance and quick checkout.",
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 13, color: AppTheme.primaryDark),
@@ -157,27 +125,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Wallet Balance Card
             if (authProvider.isLoggedIn && user != null) ...[
-              Card(
-                color: AppTheme.primary,
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [const Color(0xFF1F2937), const Color(0xFF111827)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 5)),
+                  ],
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(20.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
-                          SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.account_balance_wallet, color: AppTheme.primaryLight, size: 28),
+                          ),
+                          const SizedBox(width: 16),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 "UB Wallet Balance",
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                                style: TextStyle(color: Colors.white70, fontSize: 13),
                               ),
-                              Text(
+                              const SizedBox(height: 4),
+                              const Text(
                                 "Cashback & Refunds",
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                               ),
                             ],
                           ),
@@ -185,28 +171,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Text(
                         "₹${user.walletBalance.toStringAsFixed(0)}",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                        style: TextStyle(
+                          color: AppTheme.primaryLight,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
             ],
 
             // Menu Options List
-            Card(
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
               child: Column(
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.store, color: AppTheme.primary),
-                    title: const Text("Current Store Location"),
-                    subtitle: Text(storeProvider.selectedStore?.name ?? "Select Store"),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  _buildAnimatedListTile(
+                    icon: Icons.store_outlined,
+                    title: "Current Store Location",
+                    subtitle: storeProvider.selectedStore?.name ?? "Select Store",
                     onTap: () {
                       Navigator.push(
                         context,
@@ -214,28 +206,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.dns, color: AppTheme.primary),
-                    title: const Text("Backend API Settings"),
-                    subtitle: Text(ApiConfig.baseUrl),
-                    trailing: const Icon(Icons.edit, size: 18),
-                    onTap: () => _showApiUrlDialog(context),
+                  Divider(height: 1, color: Colors.grey.shade100, indent: 60),
+                  _buildAnimatedListTile(
+                    icon: Icons.location_on_outlined,
+                    title: "Saved Addresses",
+                    subtitle: "${user?.addresses.length ?? 0} Saved Addresses",
+                    onTap: () {
+                      if (authProvider.isLoggedIn) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AddressBookScreen()),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Please login first")),
+                        );
+                      }
+                    },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.location_on_outlined, color: AppTheme.primary),
-                    title: const Text("Saved Addresses"),
-                    subtitle: Text("${user?.addresses.length ?? 0} Saved Addresses"),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {},
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.support_agent_outlined, color: AppTheme.primary),
-                    title: const Text("Customer Support"),
-                    subtitle: const Text("Help & Contact Us"),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  Divider(height: 1, color: Colors.grey.shade100, indent: 60),
+                  _buildAnimatedListTile(
+                    icon: Icons.support_agent_outlined,
+                    title: "Customer Support",
+                    subtitle: "Help & Contact Us",
                     onTap: () {},
                   ),
                 ],
@@ -260,6 +253,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedListTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: AppTheme.primary, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey.shade400),
+            ],
+          ),
         ),
       ),
     );

@@ -6,6 +6,9 @@ class ApiConfig {
   static String get baseUrl {
     if (customBaseUrl.isNotEmpty) return customBaseUrl;
     if (kIsWeb) return "https://ubmart-admin.vercel.app/api";
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return "https://ubmart-admin.vercel.app/api";
+    }
     return "https://ubmart-admin.vercel.app/api";
   }
 

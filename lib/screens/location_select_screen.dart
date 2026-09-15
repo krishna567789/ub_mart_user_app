@@ -42,7 +42,7 @@ class LocationSelectScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "Choose a store near you:",
                         style: TextStyle(
                           fontSize: 16,
@@ -74,7 +74,7 @@ class LocationSelectScreen extends StatelessWidget {
                                 ),
                                 subtitle: Text("Phone: ${store.phone}"),
                                 trailing: isSelected
-                                    ? const Icon(Icons.check_circle, color: AppTheme.primary)
+                                    ? Icon(Icons.check_circle, color: AppTheme.primary)
                                     : const Icon(Icons.arrow_forward_ios, size: 16),
                                 onTap: () async {
                                   await storeProvider.selectStore(store);

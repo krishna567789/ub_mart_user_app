@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import 'order_tracking_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -143,7 +144,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         ],
       ),
       body: orderProvider.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : orderProvider.userOrders.isEmpty
               ? Center(
                   child: Column(
@@ -208,8 +209,22 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Live Timeline Progress
-                                  _buildOrderTimeline(order.status),
+                                  // Track Order Button
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => OrderTrackingScreen(order: order),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.location_on),
+                                      label: const Text("Track Order"),
+                                    ),
+                                  ),
                                   const Divider(),
 
                                   const Text(

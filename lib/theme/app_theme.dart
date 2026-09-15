@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Static color references for backward compatibility with existing code (will be overwritten by dynamic theme)
-  static const Color primary = Color(0xFF0C831F); // Instamart/Blinkit Green
-  static const Color primaryLight = Color(0xFFE8F5E9);
-  static const Color primaryDark = Color(0xFF075B14);
-  static const Color accent = Color(0xFFFF6D00); // Bright Orange Accent
-  static const Color accentLight = Color(0xFFFFF3E0);
-  static const Color background = Color(0xFFF4F6F8);
-  static const Color surface = Colors.white;
-  static const Color textPrimary = Color(0xFF1F2937);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color border = Color(0xFFE5E7EB);
+  // Flash Prime aesthetic static colors
+  static Color primary = const Color(0xFF00FF66); // Neon Green
+  static Color primaryLight = const Color(0xFF00FF66).withValues(alpha: 0.12);
+  static Color primaryDark = const Color(0xFF00CC52);
+  static Color accent = const Color(0xFFFFCC00); // Yellow/Gold Accent
+  static Color accentLight = const Color(0xFFFFCC00).withValues(alpha: 0.12);
+  static Color background = const Color(0xFF0F172A); // Very dark blue/slate
+  static Color surface = const Color(0xFF1E293B); // Darker surface
+  static Color textPrimary = const Color(0xFFF8FAFC); // Almost white
+  static Color textSecondary = const Color(0xFF94A3B8); // Slate 400
+  static Color border = const Color(0xFF334155); // Slate 700
 
   static ThemeData buildDynamicTheme({
     required Color primaryColor,
@@ -20,68 +20,92 @@ class AppTheme {
     required Color backgroundColor,
     required Color textPrimaryColor,
   }) {
+    final isLight = backgroundColor.computeLuminance() > 0.5;
+    final baseBrightness = isLight ? Brightness.light : Brightness.dark;
+    final baseTextTheme = isLight ? ThemeData.light().textTheme : ThemeData.dark().textTheme;
+
+    // Update global static accessors dynamically
+    primary = primaryColor;
+    primaryLight = primaryColor.withOpacity(0.12);
+    final hsl = HSLColor.fromColor(primaryColor);
+    primaryDark = hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+    accent = accentColor;
+    accentLight = accentColor.withOpacity(0.12);
+    background = backgroundColor;
+    textPrimary = textPrimaryColor;
+    textSecondary = isLight ? Colors.grey.shade600 : const Color(0xFF94A3B8);
+    surface = isLight ? Colors.white : const Color(0xFF1E293B);
+    border = isLight ? Colors.grey.shade200 : const Color(0xFF334155);
+
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.light(
+      brightness: baseBrightness,
+      primaryColor: primaryColor,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryColor,
+        brightness: baseBrightness,
         primary: primaryColor,
         secondary: accentColor,
-        surface: Colors.white,
+        surface: surface,
         error: Colors.redAccent,
-        background: backgroundColor,
       ),
-      scaffoldBackgroundColor: backgroundColor,
-      textTheme: GoogleFonts.poppinsTextTheme().copyWith(
-        titleLarge: GoogleFonts.poppins(
+      scaffoldBackgroundColor: background,
+      textTheme: GoogleFonts.interTextTheme(baseTextTheme).copyWith(
+        titleLarge: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: textPrimaryColor,
+          color: textPrimary,
         ),
-        titleMedium: GoogleFonts.poppins(
+        titleMedium: GoogleFonts.inter(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: textPrimaryColor,
+          color: textPrimary,
         ),
-        bodyLarge: GoogleFonts.poppins(
+        bodyLarge: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.normal,
-          color: textPrimaryColor,
+          color: textPrimary,
         ),
-        bodyMedium: GoogleFonts.poppins(
+        bodyMedium: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.normal,
-          color: const Color(0xFF6B7280),
+          color: textSecondary,
+        ),
+        bodySmall: GoogleFonts.inter(
+          fontSize: 10,
+          fontWeight: FontWeight.normal,
+          color: textSecondary,
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: background,
         elevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: textPrimaryColor),
-        titleTextStyle: TextStyle(
-          color: textPrimaryColor,
+        iconTheme: IconThemeData(color: textPrimary),
+        titleTextStyle: GoogleFonts.inter(
+          color: textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          fontFamily: 'Poppins',
         ),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+          side: BorderSide(color: border, width: 1),
           borderRadius: BorderRadius.circular(14),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: isLight ? Colors.white : Colors.black, // Contrast
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -96,15 +120,15 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: textPrimaryColor,
-        contentTextStyle: GoogleFonts.poppins(color: Colors.white, fontSize: 13),
+        backgroundColor: surface,
+        contentTextStyle: GoogleFonts.inter(color: isLight ? Colors.black87 : textPrimary, fontSize: 13),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
