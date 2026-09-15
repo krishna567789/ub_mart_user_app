@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../config/api_config.dart';
 import 'cart_provider.dart';
 
 class OrderProvider with ChangeNotifier {
@@ -76,9 +77,11 @@ class OrderProvider with ChangeNotifier {
 
     try {
       final String humanReadableOrderId = "UB-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}";
+      final String effectiveStoreId = (storeId.isNotEmpty) ? storeId : ApiConfig.defaultStoreId;
 
       final Map<String, dynamic> body = {
         'orderId': humanReadableOrderId,
+        'storeId': effectiveStoreId,
         'user': user.id,
         'customerName': user.name,
         'customerPhone': user.phone,
@@ -101,7 +104,7 @@ class OrderProvider with ChangeNotifier {
         'paymentStatus': paymentMethod == 'COD' ? 'PENDING' : 'PAID',
       };
 
-      final res = await _apiService.post('/orders', body: body, storeId: storeId);
+      final res = await _apiService.post('/orders', body: body, storeId: effectiveStoreId);
       final OrderModel newOrder = OrderModel.fromJson(res);
       _currentPlacingOrder = newOrder;
       _userOrders.insert(0, newOrder);

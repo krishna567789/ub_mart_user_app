@@ -54,7 +54,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
   void _loadData() async {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
 
     final storeId = storeProvider.selectedStore?.id ?? '';
     String? catId = widget.categoryId;
@@ -65,7 +68,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
 
     // If categoryId is missing, find matching category by title from categories list
-    if ((catId == null || catId.isEmpty) && productProvider.categories.isNotEmpty) {
+    if ((catId == null || catId.isEmpty) &&
+        productProvider.categories.isNotEmpty) {
       final matches = productProvider.categories.where(
         (c) => c.name.trim().toLowerCase() == widget.title.trim().toLowerCase(),
       );
@@ -75,15 +79,24 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
 
     // Always fetch subcategories for this category (or category title fallback)
-    await productProvider.fetchSubCategories(storeId, categoryId: catId ?? widget.title);
+    await productProvider.fetchSubCategories(
+      storeId,
+      categoryId: catId ?? widget.title,
+    );
 
     // Fetch products for selected category/subCategory
     await _fetchProductsForCurrentSelection(effectiveCatId: catId);
   }
 
-  Future<void> _fetchProductsForCurrentSelection({String? query, String? effectiveCatId}) async {
+  Future<void> _fetchProductsForCurrentSelection({
+    String? query,
+    String? effectiveCatId,
+  }) async {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
     final storeId = storeProvider.selectedStore?.id ?? '';
 
     final catIdToUse = effectiveCatId ?? widget.categoryId;
@@ -92,7 +105,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
       storeId,
       subCategoryId: _selectedSubCategoryId,
       categoryId: _selectedSubCategoryId == null ? catIdToUse : null,
-      search: query ?? (_searchController.text.isNotEmpty ? _searchController.text.trim() : null),
+      search:
+          query ??
+          (_searchController.text.isNotEmpty
+              ? _searchController.text.trim()
+              : null),
     );
   }
 
@@ -120,7 +137,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   hintText: "Search products, brands...",
                   border: InputBorder.none,
                 ),
-                onChanged: (val) => _fetchProductsForCurrentSelection(query: val),
+                onChanged: (val) =>
+                    _fetchProductsForCurrentSelection(query: val),
               )
             : CustomText(
                 widget.title,
@@ -152,10 +170,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
             Container(
               width: context.r(100),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                color: isDark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFF8FAFC),
                 border: Border(
                   right: BorderSide(
-                    color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+                    color: isDark
+                        ? const Color(0xFF334155)
+                        : Colors.grey.shade200,
                     width: 1,
                   ),
                 ),
@@ -199,12 +221,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 // Top Filter & Sort Row
                 Container(
                   height: context.r(40),
-                  padding: EdgeInsets.symmetric(horizontal: context.r(10), vertical: context.r(4)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.r(10),
+                    vertical: context.r(4),
+                  ),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF0F172A) : Colors.white,
                     border: Border(
                       bottom: BorderSide(
-                        color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : Colors.grey.shade200,
                         width: 1,
                       ),
                     ),
@@ -212,11 +239,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      _buildFilterPill(context, icon: Icons.tune_rounded, label: "Filters ▾", isDark: isDark),
+                      _buildFilterPill(
+                        context,
+                        icon: Icons.tune_rounded,
+                        label: "Filters ▾",
+                        isDark: isDark,
+                      ),
                       SizedBox(width: context.r(8)),
-                      _buildFilterPill(context, icon: Icons.swap_vert_rounded, label: "Sort ▾", isDark: isDark),
+                      _buildFilterPill(
+                        context,
+                        icon: Icons.swap_vert_rounded,
+                        label: "Sort ▾",
+                        isDark: isDark,
+                      ),
                       SizedBox(width: context.r(8)),
-                      _buildFilterPill(context, icon: null, label: "Brand ▾", isDark: isDark),
+                      _buildFilterPill(
+                        context,
+                        icon: null,
+                        label: "Brand ▾",
+                        isDark: isDark,
+                      ),
                     ],
                   ),
                 ),
@@ -225,55 +267,73 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 Expanded(
                   child: productProvider.isLoading
                       ? ProductGridShimmer(
-                          childAspectRatio: (hasSubCats || productProvider.isLoading) ? 0.54 : 0.62,
+                          childAspectRatio:
+                              (hasSubCats || productProvider.isLoading)
+                              ? 0.54
+                              : 0.62,
                         )
                       : products.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.inventory_2_outlined,
-                                    size: context.r(54),
-                                    color: isDark ? Colors.white38 : Colors.grey.shade400,
-                                  ),
-                                  SizedBox(height: context.r(12)),
-                                  CustomText(
-                                    "No products found",
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white70 : Colors.grey.shade600,
-                                  ),
-                                  SizedBox(height: context.r(12)),
-                                  ElevatedButton.icon(
-                                    onPressed: () => _fetchProductsForCurrentSelection(),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(context.r(10)),
-                                      ),
-                                    ),
-                                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                                    label: const CustomText("Refresh", fontSize: 13, color: Colors.white),
-                                  ),
-                                ],
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.inventory_2_outlined,
+                                size: context.r(54),
+                                color: isDark
+                                    ? Colors.white38
+                                    : Colors.grey.shade400,
                               ),
-                            )
-                          : GridView.builder(
-                              padding: EdgeInsets.all(context.r(10)),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              SizedBox(height: context.r(12)),
+                              CustomText(
+                                "No products found",
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.grey.shade600,
+                              ),
+                              SizedBox(height: context.r(12)),
+                              ElevatedButton.icon(
+                                onPressed: () =>
+                                    _fetchProductsForCurrentSelection(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      context.r(10),
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.refresh_rounded,
+                                  size: 16,
+                                ),
+                                label: const CustomText(
+                                  "Refresh",
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          padding: EdgeInsets.all(context.r(10)),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
                                 childAspectRatio: hasSubCats ? 0.54 : 0.62,
                                 crossAxisSpacing: context.r(8),
                                 mainAxisSpacing: context.r(8),
                               ),
-                              itemCount: products.length,
-                              itemBuilder: (context, index) {
-                                final p = products[index];
-                                return ProductCard(product: p);
-                              },
-                            ),
+                          itemCount: products.length,
+                          itemBuilder: (context, index) {
+                            final p = products[index];
+                            return ProductCard(product: p);
+                          },
+                        ),
                 ),
               ],
             ),
@@ -374,7 +434,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
     required bool isDark,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: context.r(10), vertical: context.r(4)),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.r(10),
+        vertical: context.r(4),
+      ),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(context.r(8)),
@@ -386,7 +449,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: isDark ? Colors.white70 : const Color(0xFF475569)),
+            Icon(
+              icon,
+              size: 12,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
             SizedBox(width: context.r(4)),
           ],
           CustomText(
@@ -400,4 +467,3 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
   }
 }
-

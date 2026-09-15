@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:un_mart_user_app/widgets/custom_text.dart';
 import '../providers/auth_provider.dart';
 import '../providers/store_provider.dart';
 import '../providers/cart_provider.dart';
@@ -95,8 +96,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success && mounted) {
       Provider.of<CartProvider>(context, listen: false).loadCartFromBackend();
-      Provider.of<FavoritesProvider>(context, listen: false).loadFavoritesFromBackend();
-      
+      Provider.of<FavoritesProvider>(
+        context,
+        listen: false,
+      ).loadFavoritesFromBackend();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -206,12 +210,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
+                      : const CustomText(
                           "Continue",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                 ),
               );
@@ -219,10 +221,11 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 24),
           Center(
-            child: Text(
+            child: CustomText(
               "By continuing, you agree to our Terms of Service & Privacy Policy",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              fontSize: 11,
+              color: Colors.grey.shade500,
             ),
           ),
         ],
@@ -247,29 +250,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               const SizedBox(width: 8),
-              Text(
+              CustomText(
                 "Verify OTP",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
+          CustomText(
             "We have sent a verification code to",
-            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
+            fontSize: 14,
+            color: AppTheme.textSecondary,
           ),
           const SizedBox(height: 4),
-          Text(
+          CustomText(
             "+91 ${_phoneController.text}",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
           ),
           const SizedBox(height: 32),
           Center(
@@ -344,12 +344,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
+                      : const CustomText(
                           "Verify & Login",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                 ),
               );

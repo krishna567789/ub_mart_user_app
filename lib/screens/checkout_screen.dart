@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:un_mart_user_app/config/api_config.dart';
+import 'package:un_mart_user_app/widgets/custom_text.dart';
 import '../providers/store_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
@@ -52,25 +54,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cart = Provider.of<CartProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
-    if (auth.user == null) return;
+    if (auth.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please login to place your order")),
+      );
+      return;
+    }
 
     AddressModel addressToUse;
     if (_selectedAddress != null) {
       addressToUse = _selectedAddress!;
+    } else if (auth.user!.addresses.isNotEmpty) {
+      addressToUse = auth.user!.addresses.first;
     } else {
-      if (!_formKey.currentState!.validate()) return;
+      if (_formKey.currentState != null && !_formKey.currentState!.validate()) {
+        return;
+      }
+
+      final completeAddr = _addressController.text.trim();
+      if (completeAddr.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enter a delivery address")),
+        );
+        return;
+      }
 
       addressToUse = AddressModel(
         tag: _tag,
-        completeAddress: _addressController.text.trim(),
-        receiverName: _receiverNameController.text.trim(),
-        receiverPhone: _receiverPhoneController.text.trim(),
+        completeAddress: completeAddr,
+        receiverName: _receiverNameController.text.trim().isNotEmpty
+            ? _receiverNameController.text.trim()
+            : auth.user!.name,
+        receiverPhone: _receiverPhoneController.text.trim().isNotEmpty
+            ? _receiverPhoneController.text.trim()
+            : auth.user!.phone,
       );
 
       await auth.addAddress(addressToUse);
     }
 
-    final storeId = store.selectedStore?.id ?? '';
+    final storeId =
+        (store.selectedStore?.id != null && store.selectedStore!.id.isNotEmpty)
+        ? store.selectedStore!.id
+        : ApiConfig.defaultStoreId;
 
     final createdOrder = await orderProvider.placeOrder(
       storeId: storeId,
@@ -88,9 +114,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         (route) => false,
       );
-    } else if (mounted && orderProvider.errorMessage != null) {
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(orderProvider.errorMessage!)),
+        SnackBar(
+          content: Text(
+            orderProvider.errorMessage ??
+                "Failed to place order. Please try again.",
+          ),
+        ),
       );
     }
   }
@@ -102,18 +133,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final orderProvider = Provider.of<OrderProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Checkout"),
-      ),
+      appBar: AppBar(title: const Text("Checkout")),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Delivery Address Section
-            const Text(
+            const CustomText(
               "Delivery Address",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
             const SizedBox(height: 12),
 
@@ -123,7 +153,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   margin: const EdgeInsets.only(bottom: 8),
                   shape: RoundedRectangleBorder(
                     side: BorderSide(
-                      color: _selectedAddress?.id == addr.id || _selectedAddress?.completeAddress == addr.completeAddress
+                      color:
+                          _selectedAddress?.id == addr.id ||
+                              _selectedAddress?.completeAddress ==
+                                  addr.completeAddress
                           ? AppTheme.primary
                           : Colors.grey.shade300,
                       width: 1.5,
@@ -132,11 +165,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   child: ListTile(
                     leading: Icon(
-                      addr.tag == 'HOME' ? Icons.home : addr.tag == 'WORK' ? Icons.work : Icons.location_on,
+                      addr.tag == 'HOME'
+                          ? Icons.home
+                          : addr.tag == 'WORK'
+                          ? Icons.work
+                          : Icons.location_on,
                       color: AppTheme.primary,
                     ),
-                    title: Text("${addr.tag} - ${addr.receiverName}"),
-                    subtitle: Text("${addr.completeAddress}\nPhone: ${addr.receiverPhone}"),
+                    title: CustomText("${addr.tag} - ${addr.receiverName}"),
+                    subtitle: CustomText(
+                      "${addr.completeAddress}\nPhone: ${addr.receiverPhone}",
+                    ),
                     isThreeLine: true,
                     trailing: Radio<AddressModel>(
                       value: addr,
@@ -169,9 +208,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       decoration: InputDecoration(
                         labelText: "Complete Address *",
                         hintText: "House No, Building, Street, Area",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      validator: (val) => val == null || val.trim().isEmpty ? "Address is required" : null,
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? "Address is required"
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -181,9 +224,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             controller: _receiverNameController,
                             decoration: InputDecoration(
                               labelText: "Receiver Name *",
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            validator: (val) => val == null || val.trim().isEmpty ? "Name required" : null,
+                            validator: (val) =>
+                                val == null || val.trim().isEmpty
+                                ? "Name required"
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -193,9 +241,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
                               labelText: "Receiver Phone *",
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                            validator: (val) => val == null || val.trim().isEmpty ? "Phone required" : null,
+                            validator: (val) =>
+                                val == null || val.trim().isEmpty
+                                ? "Phone required"
+                                : null,
                           ),
                         ),
                       ],
@@ -207,9 +260,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 24),
 
             // Payment Options
-            const Text(
+            const CustomText(
               "Payment Method",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
             const SizedBox(height: 12),
 
@@ -241,7 +295,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const Divider(height: 1),
                   RadioListTile<String>(
-                    title: Text("UB Wallet (Balance: ₹${auth.user?.walletBalance.toStringAsFixed(0) ?? '0'})"),
+                    title: Text(
+                      "UB Wallet (Balance: ₹${auth.user?.walletBalance.toStringAsFixed(0) ?? '0'})",
+                    ),
                     subtitle: const Text("Deduct from internal wallet"),
                     value: 'WALLET',
                     groupValue: _paymentMethod,
@@ -273,7 +329,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   Text(
                     "₹${cart.grandTotal.toStringAsFixed(0)}",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.primaryDark),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: AppTheme.primaryDark,
+                    ),
                   ),
                 ],
               ),
@@ -293,9 +353,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
-                    : const Text("PLACE ORDER", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    : const Text(
+                        "PLACE ORDER",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
