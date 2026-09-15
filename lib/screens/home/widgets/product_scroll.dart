@@ -3,12 +3,14 @@ import '../../../models/homepage_section.dart';
 import '../../../models/product_model.dart';
 import '../../../widgets/smart_image.dart';
 import '../../../widgets/product_card.dart';
+import '../../../widgets/custom_text.dart';
+import '../../../utils/app_sizes.dart';
 import '../../product_list_screen.dart';
 
 class ProductScroll extends StatelessWidget {
   final HomepageSection section;
 
-  const ProductScroll({Key? key, required this.section}) : super(key: key);
+  const ProductScroll({super.key, required this.section});
 
   ProductModel _toProductModel(dynamic p) {
     return ProductModel(
@@ -49,14 +51,12 @@ class ProductScroll extends StatelessWidget {
         // Section Title
         if (section.title.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text(
+            padding: EdgeInsets.fromLTRB(context.r(16), context.r(12), context.r(16), context.r(8)),
+            child: CustomText(
               section.title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: titleColor,
-              ),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: titleColor,
             ),
           ),
 
@@ -64,11 +64,11 @@ class ProductScroll extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          padding: EdgeInsets.symmetric(horizontal: context.r(16), vertical: context.r(4)),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            mainAxisSpacing: 12.0,
-            crossAxisSpacing: 10.0,
+            mainAxisSpacing: context.r(12),
+            crossAxisSpacing: context.r(10),
             childAspectRatio: 0.48,
           ),
           itemCount: displayProducts.length,
@@ -89,10 +89,10 @@ class ProductScroll extends StatelessWidget {
             );
           },
           child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            margin: EdgeInsets.fromLTRB(context.r(16), context.r(8), context.r(16), context.r(16)),
+            padding: EdgeInsets.symmetric(horizontal: context.r(16), vertical: context.r(12)),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0F2FE),
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE0F2FE),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Row(
@@ -102,9 +102,9 @@ class ProductScroll extends StatelessWidget {
                   children: List.generate(
                     displayProducts.length > 3 ? 3 : displayProducts.length,
                     (i) => Container(
-                      margin: const EdgeInsets.only(right: 4),
-                      width: 28,
-                      height: 28,
+                      margin: EdgeInsets.only(right: context.r(4)),
+                      width: context.r(28),
+                      height: context.r(28),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
@@ -119,12 +119,13 @@ class ProductScroll extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: context.r(8)),
+                CustomText(
                   "See all product",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
                 ),
-                const Icon(Icons.chevron_right, size: 18),
+                Icon(Icons.chevron_right, size: context.r(18), color: isDark ? Colors.white : const Color(0xFF0F172A)),
               ],
             ),
           ),

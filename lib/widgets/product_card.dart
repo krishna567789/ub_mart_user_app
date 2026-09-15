@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../providers/cart_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../widgets/smart_image.dart';
 import '../screens/product_detail_screen.dart';
 import '../utils/cart_animation_helper.dart';
+import '../widgets/custom_text.dart';
 
 class ProductCard extends StatefulWidget {
   final ProductModel product;
@@ -174,8 +176,10 @@ class _ProductCardState extends State<ProductCard> {
     final variant = _selectedVariant;
     final int qty = cart.getQuantity(widget.product.id, variant.size);
     final bool isOutOfStock = variant.stock <= 0 && widget.product.variants.every((v) => v.stock <= 0);
-    final bool hasDiscount = (variant.originalPrice ?? 0) > variant.price;
+    final hasDiscount = (variant.originalPrice ?? 0) > variant.price;
     final primaryColor = Theme.of(context).primaryColor;
+    final favoritesProvider = Provider.of<FavoritesProvider>(context);
+    final isFavorite = favoritesProvider.isFavorite(widget.product.id);
 
     double discountPct = 0;
     if (hasDiscount) {
@@ -256,10 +260,27 @@ class _ProductCardState extends State<ProductCard> {
                 ),
 
                 // Heart icon top-right
-                const Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Icon(Icons.favorite_border, color: Colors.grey, size: 18),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      favoritesProvider.toggleFavorite(widget.product.id);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: isFavorite ? Colors.red : Colors.grey,
+                        size: 18,
+                      ),
+                    ),
+                  ),
                 ),
 
                 // OUT OF STOCK banner at bottom of image
@@ -333,9 +354,11 @@ class _ProductCardState extends State<ProductCard> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: CustomText(
                           variant.size,
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -349,9 +372,11 @@ class _ProductCardState extends State<ProductCard> {
                               color: primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(
+                            child: CustomText(
                               "${widget.product.variants.length} options ▾",
-                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: primaryColor),
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
                             ),
                           ),
                         ),
@@ -360,11 +385,14 @@ class _ProductCardState extends State<ProductCard> {
                   const SizedBox(height: 3),
 
                   // Product Name
-                  Text(
+                  CustomText(
                     widget.product.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A), height: 1.25),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                    height: 1.25,
                   ),
                   const SizedBox(height: 4),
 
@@ -373,7 +401,7 @@ class _ProductCardState extends State<ProductCard> {
                     children: [
                       Icon(Icons.bolt, size: 13, color: primaryColor),
                       const SizedBox(width: 2),
-                      const Text("10 mins", style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                      const CustomText("10 mins", fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                       if (hasDiscount) ...[
                         const Spacer(),
                         Container(
@@ -382,9 +410,11 @@ class _ProductCardState extends State<ProductCard> {
                             color: const Color(0xFFFFF7ED),
                             borderRadius: BorderRadius.circular(3),
                           ),
-                          child: Text(
+                          child: CustomText(
                             "${discountPct.toStringAsFixed(0)}% OFF",
-                            style: const TextStyle(fontSize: 9, color: Color(0xFFEA580C), fontWeight: FontWeight.w800),
+                            fontSize: 9,
+                            color: const Color(0xFFEA580C),
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ],
@@ -397,19 +427,19 @@ class _ProductCardState extends State<ProductCard> {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
+                      CustomText(
                         "₹${variant.price.toStringAsFixed(0)}",
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
                       ),
                       if (hasDiscount) ...[
                         const SizedBox(width: 5),
-                        Text(
+                        CustomText(
                           "₹${(variant.originalPrice ?? 0).toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF94A3B8),
-                            decoration: TextDecoration.lineThrough,
-                          ),
+                          fontSize: 11,
+                          color: const Color(0xFF94A3B8),
+                          decoration: TextDecoration.lineThrough,
                         ),
                       ],
                     ],
@@ -447,9 +477,12 @@ class _AddButton extends StatelessWidget {
             )
           ],
         ),
-        child: const Text(
+        child: const CustomText(
           "ADD",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5),
+          color: Colors.white,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -493,9 +526,11 @@ class _QtyController extends StatelessWidget {
               child: Icon(Icons.remove, color: Colors.white, size: 14),
             ),
           ),
-          Text(
+          CustomText(
             '$qty',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 12,
           ),
           GestureDetector(
             onTap: onAdd,

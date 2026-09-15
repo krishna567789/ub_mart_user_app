@@ -1,9 +1,12 @@
+import 'sub_category_model.dart';
+
 class CategoryModel {
   final String id;
   final String name;
   final String image;
   final String? mainCategory;
   final bool isActive;
+  final List<SubCategoryModel> subCategories;
 
   CategoryModel({
     required this.id,
@@ -11,6 +14,7 @@ class CategoryModel {
     required this.image,
     this.mainCategory,
     this.isActive = true,
+    this.subCategories = const [],
   });
 
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
@@ -21,12 +25,20 @@ class CategoryModel {
       mainCatId = json['mainCategory'];
     }
 
+    List<SubCategoryModel> subCats = [];
+    if (json['subCategories'] is List) {
+      subCats = (json['subCategories'] as List)
+          .map((sc) => SubCategoryModel.fromJson(sc is Map ? Map<String, dynamic>.from(sc) : <String, dynamic>{}))
+          .toList();
+    }
+
     return CategoryModel(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       image: json['image'] ?? '',
       mainCategory: mainCatId,
       isActive: json['isActive'] ?? true,
+      subCategories: subCats,
     );
   }
 }

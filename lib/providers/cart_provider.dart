@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../models/coupon_model.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 
 class CartItem {
   final ProductModel product;
@@ -18,7 +19,9 @@ class CartItem {
 }
 
 class CartProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  // Use global apiService instead of a local instance
+  // final ApiService _apiService = ApiService();
+  String? _userId;
 
   final Map<String, CartItem> _items = {}; // key: productId_variantSize
   CouponModel? _appliedCoupon;
@@ -104,6 +107,7 @@ class CartProvider with ChangeNotifier {
       );
     }
     notifyListeners();
+    syncCartOnline();
   }
 
   void removeItem(String productId, String variantSize) {
@@ -116,12 +120,14 @@ class CartProvider with ChangeNotifier {
       _items.remove(key);
     }
     notifyListeners();
+    syncCartOnline();
   }
 
   void deleteItemCompletely(String productId, String variantSize) {
     final key = "${productId}_$variantSize";
     _items.remove(key);
     notifyListeners();
+    syncCartOnline();
   }
 
   void clearCart() {
@@ -131,6 +137,7 @@ class CartProvider with ChangeNotifier {
     _deliveryTip = 0.0;
     _deliveryInstructions.clear();
     notifyListeners();
+    syncCartOnline();
   }
 
   Future<void> fetchCoupons(String storeId) async {
@@ -138,7 +145,7 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _apiService.get('/coupons', storeId: storeId);
+      final res = await apiService.get('/coupons', storeId: storeId);
       if (res is List) {
         _availableCoupons = res
             .map((c) => CouponModel.fromJson(c))
@@ -158,7 +165,7 @@ class CartProvider with ChangeNotifier {
     required String storeId,
   }) async {
     try {
-      final res = await _apiService.post(
+      final res = await apiService.post(
         '/coupons',
         body: {
           'action': 'VALIDATE',
@@ -221,5 +228,60 @@ class CartProvider with ChangeNotifier {
     _appliedCoupon = null;
     _validatedDiscount = 0.0;
     notifyListeners();
+  }
+
+  Future<void> loadCartFromBackend() async {
+    final user = await StorageService.getUser();
+    if (user == null) return;
+    _userId = user.id;
+    try {
+      final res = await apiService.get('/users/$_userId/cart');
+      if (res != null && res['success'] == true) {
+        final List cartItems = res['cart'] ?? [];
+        _items.clear();
+        for (var item in cartItems) {
+          if (item['productId'] != null && item['productId'] is Map) {
+            final product = ProductModel.fromJson(item['productId']);
+            final String variantSize = item['variantSize'];
+            final int quantity = item['quantity'] ?? 1;
+            
+            final variant = product.variants.firstWhere(
+              (v) => v.size == variantSize,
+              orElse: () => product.variants.first,
+            );
+            
+            final key = "${product.id}_$variantSize";
+            _items[key] = CartItem(
+              product: product,
+              selectedVariant: variant,
+              quantity: quantity,
+            );
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading cart: $e');
+    }
+  }
+
+  Future<void> syncCartOnline() async {
+    if (_userId == null) {
+      final user = await StorageService.getUser();
+      if (user != null) _userId = user.id;
+    }
+    if (_userId == null) return;
+
+    final cartList = _items.values.map((item) => {
+      'productId': item.product.id,
+      'variantSize': item.selectedVariant.size,
+      'quantity': item.quantity,
+    }).toList();
+
+    try {
+      await apiService.put('/users/$_userId/cart', body: { 'cart': cartList });
+    } catch (e) {
+      debugPrint('Error syncing cart: $e');
+    }
   }
 }

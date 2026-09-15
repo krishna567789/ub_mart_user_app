@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/store_provider.dart';
+import '../providers/cart_provider.dart';
+import '../providers/favorites_provider.dart';
 import '../theme/app_theme.dart';
+import '../config/api_config.dart';
 import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
@@ -55,6 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
+      // Auto-fill mock OTP for easier testing right now
+      _otpController.text = "123456";
+
       // Start listening for SMS (using User Consent API)
       final res = await smartAuth.getSmsWithUserConsentApi();
       if (res.hasData && res.data?.code != null) {
@@ -76,7 +82,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final storeId = storeProvider.selectedStore?.id ?? '';
+    final storeId = storeProvider.selectedStore?.id?.isNotEmpty == true
+        ? storeProvider.selectedStore!.id
+        : ApiConfig.defaultStoreId;
 
     final success = await authProvider.verifyOtp(
       phone: _phoneController.text.trim(),
@@ -86,6 +94,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
+      Provider.of<CartProvider>(context, listen: false).loadCartFromBackend();
+      Provider.of<FavoritesProvider>(context, listen: false).loadFavoritesFromBackend();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

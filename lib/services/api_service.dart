@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../utils/api_constants.dart';
 import '../config/api_config.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
   final http.Client _client = http.Client();
@@ -42,9 +43,11 @@ class ApiService {
     }
     
     final headers = _getHeaders(storeId);
+    _logRequest('GET', url, headers);
 
     try {
       final response = await _client.get(url, headers: headers);
+      _logResponse(response);
       return _processResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
@@ -53,12 +56,13 @@ class ApiService {
 
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body, String? storeId}) async {
     final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final headers = _getHeaders(storeId);
+    final jsonBody = body != null ? jsonEncode(body) : null;
+    _logRequest('POST', url, headers, jsonBody);
+
     try {
-      final response = await _client.post(
-        url,
-        headers: _getHeaders(storeId),
-        body: body != null ? jsonEncode(body) : null,
-      );
+      final response = await _client.post(url, headers: headers, body: jsonBody);
+      _logResponse(response);
       return _processResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
@@ -67,12 +71,13 @@ class ApiService {
 
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body, String? storeId}) async {
     final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final headers = _getHeaders(storeId);
+    final jsonBody = body != null ? jsonEncode(body) : null;
+    _logRequest('PUT', url, headers, jsonBody);
+
     try {
-      final response = await _client.put(
-        url,
-        headers: _getHeaders(storeId),
-        body: body != null ? jsonEncode(body) : null,
-      );
+      final response = await _client.put(url, headers: headers, body: jsonBody);
+      _logResponse(response);
       return _processResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
@@ -81,12 +86,13 @@ class ApiService {
 
   Future<dynamic> patch(String endpoint, {Map<String, dynamic>? body, String? storeId}) async {
     final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    final headers = _getHeaders(storeId);
+    final jsonBody = body != null ? jsonEncode(body) : null;
+    _logRequest('PATCH', url, headers, jsonBody);
+
     try {
-      final response = await _client.patch(
-        url,
-        headers: _getHeaders(storeId),
-        body: body != null ? jsonEncode(body) : null,
-      );
+      final response = await _client.patch(url, headers: headers, body: jsonBody);
+      _logResponse(response);
       return _processResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
@@ -98,8 +104,13 @@ class ApiService {
     if (queryParams != null && queryParams.isNotEmpty) {
       url = url.replace(queryParameters: queryParams);
     }
+    
+    final headers = _getHeaders(storeId);
+    _logRequest('DELETE', url, headers);
+
     try {
-      final response = await _client.delete(url, headers: _getHeaders(storeId));
+      final response = await _client.delete(url, headers: headers);
+      _logResponse(response);
       return _processResponse(response);
     } catch (e) {
       throw Exception('Network error: $e');
@@ -120,6 +131,37 @@ class ApiService {
       } catch (_) {}
       throw Exception('API Error (${response.statusCode}): $message');
     }
+  }
+
+  void _logRequest(String method, Uri url, Map<String, String> headers, [String? body]) {
+    if (!kDebugMode) return;
+    debugPrint('\n================ API REQUEST ================');
+    debugPrint('[$method] $url');
+    debugPrint('HEADERS: $headers');
+    if (body != null) {
+      try {
+        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonDecode(body));
+        debugPrint('BODY: \n$prettyJson');
+      } catch (_) {
+        debugPrint('BODY: $body');
+      }
+    }
+    debugPrint('=============================================\n');
+  }
+
+  void _logResponse(http.Response response) {
+    if (!kDebugMode) return;
+    debugPrint('\n================ API RESPONSE ===============');
+    debugPrint('[${response.statusCode}] ${response.request?.url}');
+    if (response.body.isNotEmpty) {
+      try {
+        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body));
+        debugPrint('BODY: \n$prettyJson');
+      } catch (_) {
+        debugPrint('BODY: ${response.body}');
+      }
+    }
+    debugPrint('=============================================\n');
   }
 }
 

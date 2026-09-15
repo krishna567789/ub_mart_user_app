@@ -2,27 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_text.dart';
+import '../utils/app_sizes.dart';
+
 class CartBottomBar extends StatelessWidget {
   final VoidCallback onTap;
   const CartBottomBar({super.key, required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
     if (cart.itemCount == 0) return const SizedBox.shrink();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.r(16),
+        vertical: context.r(10),
+      ),
       decoration: BoxDecoration(
         color: AppTheme.primary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(context.r(16))),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, -3),
           ),
         ],
       ),
-
       child: SafeArea(
         top: false,
         child: Row(
@@ -32,38 +39,32 @@ class CartBottomBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                CustomText(
                   "${cart.itemCount} ${cart.itemCount == 1 ? 'ITEM' : 'ITEMS'}",
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
                 ),
-                Text(
+                CustomText(
                   "₹${cart.grandTotal.toStringAsFixed(0)}",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ],
             ),
             InkWell(
               onTap: onTap,
-              child: const Row(
+              child: Row(
                 children: [
-                  Text(
+                  const CustomText(
                     "View Cart",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
                   ),
-                  SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+                  SizedBox(width: context.r(6)),
+                  Icon(Icons.arrow_forward_ios, color: Colors.white, size: context.r(16)),
                 ],
               ),
             ),

@@ -4,11 +4,7 @@ import 'banner_slider.dart';
 import 'category_grid.dart';
 import 'product_scroll.dart';
 import 'offer_strip.dart';
-import 'hyperpass_card.dart';
 import 'flash_drop_banner.dart';
-import 'ai_replenish_card.dart';
-import 'squad_buying_card.dart';
-
 import 'lightning_deals.dart';
 import 'curated_moods.dart';
 import 'bestseller_grid.dart';
@@ -26,7 +22,7 @@ class HomepageSectionParser extends StatelessWidget {
       case 'SINGLE_BANNER':
         return BannerSlider(section: section);
       case 'CATEGORY_GRID':
-      case 'MAIN_CATEGORY_GRID':
+        // case 'MAIN_CATEGORY_GRID':
         return CategoryGrid(section: section);
       case 'PRODUCT_SCROLL':
       case 'FLASH_SALE':

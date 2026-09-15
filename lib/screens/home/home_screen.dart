@@ -121,86 +121,72 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Consumer<HomeProvider>(
+        builder: (context, provider, child) {
+          return DeliveryBikeLoader(
+            onRefresh: () async => _refreshAll(),
+            child: CustomScrollView(
+              slivers: [
+                _buildSliverHeader(context, settingsProvider, provider),
+                if (announcement != null &&
+                    announcement.isActive &&
+                    announcement.text.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _buildAnnouncementBar(announcement),
+                  ),
 
-      body: Stack(
-        children: [
-          Consumer<HomeProvider>(
-            builder: (context, provider, child) {
-              return DeliveryBikeLoader(
-                onRefresh: () async => _refreshAll(),
-                child: CustomScrollView(
-                  slivers: [
-                    _buildSliverHeader(context, settingsProvider, provider),
-                    if (announcement != null &&
-                        announcement.isActive &&
-                        announcement.text.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: _buildAnnouncementBar(announcement),
-                      ),
-
-                    if (provider.isLoading)
-                      _buildShimmerLoading()
-                    else if (provider.error != null)
-                      SliverFillRemaining(
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Error: ${provider.error}',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: isLight
-                                      ? Colors.black87
-                                      : Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: _refreshAll,
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else if (provider.sections.isEmpty)
-                      SliverFillRemaining(
-                        child: Center(
-                          child: Text(
-                            'No homepage sections found',
+                if (provider.isLoading)
+                  _buildShimmerLoading()
+                else if (provider.error != null)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Error: ${provider.error}',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: isLight ? Colors.black54 : Colors.white,
+                              color: isLight ? Colors.black87 : Colors.white,
                             ),
                           ),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.only(bottom: 120),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final section = provider.sections[index];
-                            return HomepageSectionParser(section: section);
-                          }, childCount: provider.sections.length),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: _refreshAll,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (provider.sections.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Text(
+                        'No homepage sections found',
+                        style: TextStyle(
+                          color: isLight ? Colors.black54 : Colors.white,
                         ),
                       ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildFloatingCart(context),
-          ),
-        ],
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.only(bottom: 130),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((
+                        context,
+                        index,
+                      ) {
+                        final section = provider.sections[index];
+                        return HomepageSectionParser(section: section);
+                      }, childCount: provider.sections.length),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

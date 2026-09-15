@@ -3,8 +3,7 @@ import '../../../models/homepage_section.dart';
 import '../../../widgets/smart_image.dart';
 import '../../../widgets/glowing_border.dart';
 import '../../../widgets/custom_text.dart';
-
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../utils/app_sizes.dart';
 
 class LightningDeals extends StatelessWidget {
   final HomepageSection section;
@@ -15,80 +14,80 @@ class LightningDeals extends StatelessWidget {
   Widget build(BuildContext context) {
     if (section.products.isEmpty) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
     return Container(
-      color: const Color(0xFFF8FAFC), // slightly off white
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      color: bgColor,
+      padding: EdgeInsets.symmetric(vertical: context.r(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: context.r(16)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: EdgeInsets.all(context.r(4)),
                       decoration: BoxDecoration(
                         color: Colors.amber,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(context.r(4)),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.flash_on,
                         color: Colors.white,
-                        size: 14,
+                        size: context.r(14),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: context.r(8)),
+                    CustomText(
                       "Lightning Deals",
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.r(8),
+                    vertical: context.r(4),
                   ),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(context.r(12)),
                     border: Border.all(color: Colors.red.shade200),
                   ),
-                  child: Text(
+                  child: CustomText(
                     section.metadata['timerText'] ?? "Ends soon",
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.r(16)),
           SizedBox(
-            height: 280, // High enough to hold the detailed card
+            height: context.r(280),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: context.r(16)),
               itemCount: section.products.length,
               itemBuilder: (context, index) {
                 final product = section.products[index];
                 final variant = product.variants.first;
                 return Container(
-                  width: 140,
-                  margin: const EdgeInsets.only(right: 12),
+                  width: context.r(140),
+                  margin: EdgeInsets.only(right: context.r(12)),
                   child: GlowingBorder(
                     borderWidth: 2.0,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(context.r(16)),
                     colors: const [
                       Color(0xFFFFD700), // Gold
                       Color(0xFFFF8C00), // Dark Orange
@@ -96,8 +95,8 @@ class LightningDeals extends StatelessWidget {
                     ],
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(context.r(16)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,16 +105,16 @@ class LightningDeals extends StatelessWidget {
                           Stack(
                             children: [
                               Container(
-                                height: 120,
+                                height: context.r(120),
                                 width: double.infinity,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
+                                    top: Radius.circular(context.r(16)),
                                   ),
                                 ),
                                 child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(16),
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(context.r(16)),
                                   ),
                                   child: SmartImage(
                                     imageUrl: product.images.isNotEmpty
@@ -126,41 +125,39 @@ class LightningDeals extends StatelessWidget {
                                 ),
                               ),
                               Positioned(
-                                top: 8,
-                                left: 8,
+                                top: context.r(8),
+                                left: context.r(8),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: context.r(6),
+                                    vertical: context.r(2),
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.amber,
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(context.r(4)),
                                   ),
-                                  child: Text(
+                                  child: CustomText(
                                     product.badge ?? "DEAL",
-                                    style: const TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),
-                              const Positioned(
-                                top: 8,
-                                right: 8,
+                              Positioned(
+                                top: context.r(8),
+                                right: context.r(8),
                                 child: Icon(
                                   Icons.favorite_border,
                                   color: Colors.grey,
-                                  size: 16,
+                                  size: context.r(16),
                                 ),
                               ),
                             ],
                           ),
                           // Content
                           Padding(
-                            padding: const EdgeInsets.all(8.0),
+                            padding: EdgeInsets.all(context.r(8)),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -168,115 +165,98 @@ class LightningDeals extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 2,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: context.r(4),
+                                        vertical: context.r(2),
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.blue.shade50,
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(context.r(4)),
                                       ),
-                                      child: Text(
+                                      child: CustomText(
                                         product.description ?? "Organic",
-                                        style: TextStyle(
-                                          color: Colors.blue.shade700,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue.shade700,
                                       ),
                                     ),
                                     if (variant.stock < 20)
-                                      Text(
+                                      CustomText(
                                         "${variant.stock} Left",
-                                        style: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
                                       )
                                     else
-                                      const Row(
+                                      Row(
                                         children: [
                                           Icon(
                                             Icons.star,
                                             color: Colors.green,
-                                            size: 10,
+                                            size: context.r(10),
                                           ),
-                                          Text(
+                                          const CustomText(
                                             " 4.8",
-                                            style: TextStyle(
-                                              color: Colors.green,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green,
                                           ),
                                         ],
                                       ),
                                   ],
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
+                                SizedBox(height: context.r(6)),
+                                CustomText(
                                   product.name,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.black87,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.2,
-                                  ),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                  height: 1.2,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
+                                SizedBox(height: context.r(4)),
+                                CustomText(
                                   variant.size,
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 10,
-                                  ),
+                                  fontSize: 10,
+                                  color: Colors.grey,
                                 ),
-                                const SizedBox(height: 8),
+                                SizedBox(height: context.r(8)),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
+                                        CustomText(
                                           "₹${variant.price}",
-                                          style: const TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w900,
-                                          ),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          color: isDark ? Colors.white : Colors.black,
                                         ),
                                         if (variant.originalPrice != null)
-                                          Text(
+                                          CustomText(
                                             "₹${variant.originalPrice}",
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 9,
-                                              decoration:
-                                                  TextDecoration.lineThrough,
-                                            ),
+                                            fontSize: 9,
+                                            color: Colors.grey,
+                                            decoration: TextDecoration.lineThrough,
                                           ),
                                       ],
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 6,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: context.r(8),
+                                        vertical: context.r(6),
                                       ),
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF0C831F),
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(context.r(8)),
                                       ),
-                                      child: const Text(
+                                      child: const CustomText(
                                         "+ ADD",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../models/homepage_section.dart';
 import '../../../models/product.dart';
+import '../../../widgets/custom_text.dart';
 import '../../../widgets/smart_image.dart';
+import '../../../utils/app_sizes.dart';
 import '../../product_list_screen.dart';
 
 class BestsellerGrid extends StatelessWidget {
@@ -13,39 +15,53 @@ class BestsellerGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     if (section.bestsellerItems.isEmpty) return const SizedBox.shrink();
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final titleColor = Theme.of(context).textTheme.titleLarge?.color ?? (isDark ? Colors.white : const Color(0xFF0F172A));
+    final titleColor = Theme.of(context).textTheme.titleLarge?.color;
+    final cardWidth = context.w(0.80);
+    final cardHeight = context.w(0.80);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (section.title.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-            child: Text(
+            padding: EdgeInsets.fromLTRB(
+              context.r(16),
+              context.r(16),
+              context.r(16),
+              context.r(10),
+            ),
+            child: CustomText(
               section.title,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: titleColor,
-                letterSpacing: -0.3,
-              ),
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: titleColor,
+              letterSpacing: -0.3,
             ),
           ),
-        // Horizontal scroll of category cards
-        SizedBox(
-          height: 240,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: section.bestsellerItems.length,
-            itemBuilder: (context, index) {
-              final item = section.bestsellerItems[index];
-              return _CategoryCard(item: item);
-            },
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 5,
+            crossAxisSpacing: 5,
+            // childAspectRatio: cardWidth / cardHeight,
+            mainAxisExtent: 180,
           ),
+          // scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: context.r(12)),
+          itemCount: section.bestsellerItems.length,
+          itemBuilder: (context, index) {
+            final item = section.bestsellerItems[index];
+            return _CategoryCard(
+              item: item,
+
+              cardWidth: cardWidth,
+              cardHeight: cardHeight,
+            );
+          },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: context.r(16)),
       ],
     );
   }
@@ -53,7 +69,13 @@ class BestsellerGrid extends StatelessWidget {
 
 class _CategoryCard extends StatelessWidget {
   final BestsellerItem item;
-  const _CategoryCard({required this.item});
+  final double cardWidth;
+  final double cardHeight;
+  const _CategoryCard({
+    required this.item,
+    required this.cardWidth,
+    required this.cardHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -79,11 +101,11 @@ class _CategoryCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 168,
-        margin: const EdgeInsets.only(right: 12, bottom: 4),
+        width: cardWidth,
+        // margin: EdgeInsets.only(right: context.r(12), bottom: context.r(4)),
         decoration: BoxDecoration(
           color: cardBg,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(context.r(16)),
           border: Border.all(color: cardBorder),
           boxShadow: [
             BoxShadow(
@@ -96,10 +118,11 @@ class _CategoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 2×2 Product Image Grid OR category image fallback
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(context.r(16)),
+                ),
                 child: hasProducts
                     ? _ProductGrid(
                         products: products,
@@ -112,24 +135,26 @@ class _CategoryCard extends StatelessWidget {
                       ),
               ),
             ),
-            // Category Name at bottom
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.r(10),
+                vertical: context.r(10),
+              ),
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(context.r(16)),
+                ),
               ),
-              child: Text(
+              child: CustomText(
                 item.category.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                  height: 1.3,
-                ),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+                height: 1.3,
               ),
             ),
           ],
@@ -139,7 +164,6 @@ class _CategoryCard extends StatelessWidget {
   }
 }
 
-// 2×2 product image grid
 class _ProductGrid extends StatelessWidget {
   final List<Product> products;
   final Color gridBg;
@@ -156,7 +180,7 @@ class _ProductGrid extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(context.r(8)),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 5,
@@ -170,19 +194,18 @@ class _ProductGrid extends StatelessWidget {
           return Container(
             decoration: BoxDecoration(
               color: gridBg,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.r(8)),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.r(8)),
               child: SmartImage(imageUrl: img, fit: BoxFit.contain),
             ),
           );
         }
-        // Empty slot
         return Container(
           decoration: BoxDecoration(
             color: emptySlotBg,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(context.r(8)),
           ),
         );
       },
@@ -190,7 +213,6 @@ class _ProductGrid extends StatelessWidget {
   }
 }
 
-// Fallback when no products assigned yet
 class _CategoryImageFallback extends StatelessWidget {
   final String imageUrl;
   final Color bgColor;
@@ -203,7 +225,7 @@ class _CategoryImageFallback extends StatelessWidget {
       color: bgColor,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(context.r(24)),
           child: SmartImage(imageUrl: imageUrl, fit: BoxFit.contain),
         ),
       ),

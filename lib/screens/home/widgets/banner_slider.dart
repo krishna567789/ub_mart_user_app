@@ -21,7 +21,7 @@ class _BannerSliderState extends State<BannerSlider> {
 
     return Column(
       children: [
-        SizedBox(height: 10),
+        SizedBox(height: 12),
 
         SizedBox(
           height: 180,
@@ -49,7 +49,7 @@ class _BannerSliderState extends State<BannerSlider> {
           ),
         ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: widget.section.banners.asMap().entries.map((entry) {
@@ -68,7 +68,6 @@ class _BannerSliderState extends State<BannerSlider> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 16),
       ],
     );
   }

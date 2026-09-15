@@ -50,28 +50,28 @@ class AppTheme {
         error: Colors.redAccent,
       ),
       scaffoldBackgroundColor: background,
-      textTheme: GoogleFonts.interTextTheme(baseTextTheme).copyWith(
-        titleLarge: GoogleFonts.inter(
+      textTheme: GoogleFonts.poppinsTextTheme(baseTextTheme).copyWith(
+        titleLarge: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: textPrimary,
         ),
-        titleMedium: GoogleFonts.inter(
+        titleMedium: GoogleFonts.poppins(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: textPrimary,
         ),
-        bodyLarge: GoogleFonts.inter(
+        bodyLarge: GoogleFonts.poppins(
           fontSize: 14,
           fontWeight: FontWeight.normal,
           color: textPrimary,
         ),
-        bodyMedium: GoogleFonts.inter(
+        bodyMedium: GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.normal,
           color: textSecondary,
         ),
-        bodySmall: GoogleFonts.inter(
+        bodySmall: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.normal,
           color: textSecondary,
@@ -82,7 +82,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         iconTheme: IconThemeData(color: textPrimary),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.poppins(
           color: textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.bold,
@@ -105,7 +105,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
@@ -120,7 +120,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),
@@ -128,7 +128,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: surface,
-        contentTextStyle: GoogleFonts.inter(color: isLight ? Colors.black87 : textPrimary, fontSize: 13),
+        contentTextStyle: GoogleFonts.poppins(color: isLight ? Colors.black87 : textPrimary, fontSize: 13),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
