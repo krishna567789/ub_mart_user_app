@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:provider/provider.dart';
 import 'package:un_mart_user_app/widgets/custom_text.dart';
@@ -38,6 +41,163 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   late Animation<double> _bikeMovementAnimation;
 
   late AnimationController _radarScanController;
+
+  GoogleMapController? _mapController;
+  bool _useGoogleMap = true;
+
+  static const double _defaultStoreLat = 28.5706;
+  static const double _defaultStoreLng = 77.3260;
+
+  LatLng get _storeLatLng => const LatLng(_defaultStoreLat, _defaultStoreLng);
+
+  LatLng get _destLatLng {
+    final lat = _order.deliveryAddress.lat ?? (_defaultStoreLat + 0.0078);
+    final lng = _order.deliveryAddress.lng ?? (_defaultStoreLng + 0.0092);
+    return LatLng(lat, lng);
+  }
+
+  LatLng _getRiderLatLng(double progress) {
+    if (_order.assignedRider != null &&
+        _order.assignedRider!['lat'] != null &&
+        _order.assignedRider!['lng'] != null) {
+      return LatLng(
+        (_order.assignedRider!['lat'] as num).toDouble(),
+        (_order.assignedRider!['lng'] as num).toDouble(),
+      );
+    }
+    final s = _storeLatLng;
+    final d = _destLatLng;
+    return LatLng(
+      s.latitude + (d.latitude - s.latitude) * progress,
+      s.longitude + (d.longitude - s.longitude) * progress,
+    );
+  }
+
+  List<LatLng> _generateRoutePoints(LatLng start, LatLng end) {
+    final latDiff = end.latitude - start.latitude;
+    final lngDiff = end.longitude - start.longitude;
+
+    return [
+      start,
+      LatLng(start.latitude + latDiff * 0.25, start.longitude + lngDiff * 0.05),
+      LatLng(start.latitude + latDiff * 0.40, start.longitude + lngDiff * 0.35),
+      LatLng(start.latitude + latDiff * 0.65, start.longitude + lngDiff * 0.50),
+      LatLng(start.latitude + latDiff * 0.85, start.longitude + lngDiff * 0.88),
+      end,
+    ];
+  }
+
+  Set<Polyline> _getPolylines(bool isDelivered, int currentStep) {
+    final fullRoute = _generateRoutePoints(_storeLatLng, _destLatLng);
+    final polylineColor = isDelivered
+        ? const Color(0xFF10B981)
+        : const Color(0xFF0284C7);
+
+    return {
+      // Glow/halo polyline
+      Polyline(
+        polylineId: const PolylineId('route_halo'),
+        points: fullRoute,
+        color: polylineColor.withValues(alpha: 0.30),
+        width: 8,
+        jointType: JointType.round,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+      ),
+      // Sharp core route polyline
+      Polyline(
+        polylineId: const PolylineId('route_core'),
+        points: fullRoute,
+        color: polylineColor,
+        width: 5,
+        jointType: JointType.round,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+      ),
+    };
+  }
+
+  Set<Marker> _getMarkers(
+    bool isDelivered,
+    bool isCancelled,
+    int currentStep,
+    double bikeProgress,
+  ) {
+    final markers = <Marker>{};
+
+    // 1. Store Hub Marker
+    markers.add(
+      Marker(
+        markerId: const MarkerId('store_hub'),
+        position: _storeLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        infoWindow: const InfoWindow(
+          title: "🏢 UB Store Hub",
+          snippet: "Express fulfillment dark store",
+        ),
+      ),
+    );
+
+    // 2. Customer Destination Marker
+    markers.add(
+      Marker(
+        markerId: const MarkerId('customer_dest'),
+        position: _destLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          isDelivered ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
+        ),
+        infoWindow: InfoWindow(
+          title: "🏠 ${_order.deliveryAddress.tag.toUpperCase()} (My Location)",
+          snippet: _order.deliveryAddress.completeAddress,
+        ),
+      ),
+    );
+
+    // 3. Delivery Rider Marker (When packing, out for delivery, or delivered)
+    if (!isCancelled && currentStep >= 1) {
+      final riderPos = _getRiderLatLng(bikeProgress);
+      markers.add(
+        Marker(
+          markerId: const MarkerId('delivery_rider'),
+          position: riderPos,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            isDelivered ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueOrange,
+          ),
+          infoWindow: InfoWindow(
+            title: "🛵 ${_order.assignedRider?['name'] ?? 'UB Delivery Partner'}",
+            snippet: isDelivered ? "Delivered Successfully" : "Live En-Route (Express)",
+          ),
+        ),
+      );
+    }
+
+    return markers;
+  }
+
+  void _fitMapBounds() {
+    if (_mapController == null) return;
+    final s = _storeLatLng;
+    final d = _destLatLng;
+
+    final minLat = math.min(s.latitude, d.latitude);
+    final maxLat = math.max(s.latitude, d.latitude);
+    final minLng = math.min(s.longitude, d.longitude);
+    final maxLng = math.max(s.longitude, d.longitude);
+
+    final southWest = LatLng(minLat - 0.003, minLng - 0.003);
+    final northEast = LatLng(maxLat + 0.003, maxLng + 0.003);
+
+    final bounds = LatLngBounds(southwest: southWest, northeast: northEast);
+    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+  }
+
+  static const String _darkMapStyle = '''[
+    {"elementType": "geometry", "stylers": [{"color": "#1e293b"}]},
+    {"elementType": "labels.text.fill", "stylers": [{"color": "#94a3b8"}]},
+    {"elementType": "labels.text.stroke", "stylers": [{"color": "#0f172a"}]},
+    {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#334155"}]},
+    {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0f172a"}]}
+  ]''';
 
   @override
   void initState() {
@@ -106,6 +266,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     _pulseController.dispose();
     _bikeMovementController.dispose();
     _radarScanController.dispose();
+    _mapController = null;
     super.dispose();
   }
 
@@ -804,30 +965,157 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
               : 0.08);
 
     return Container(
-      height: 270,
+      height: 310,
       width: double.infinity,
       color: isDark ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
       child: Stack(
         children: [
-          // Custom Painted Realistic Map Graphic
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: Listenable.merge([
-                _pulseAnimation,
-                _bikeMovementAnimation,
-              ]),
-              builder: (context, _) {
-                return CustomPaint(
-                  painter: _DeliveryMapPainter(
-                    pulseValue: _pulseAnimation.value,
-                    bikeProgress: bikeProgress,
-                    isDark: isDark,
-                    isDelivered: isDelivered,
-                    isCancelled: isCancelled,
-                    primaryColor: AppTheme.primary,
+          // 1. Map Layer: Real Interactive Google Map with Polyline or 3D Vector Graphic
+          if (_useGoogleMap)
+            Positioned.fill(
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(
+                    (_storeLatLng.latitude + _destLatLng.latitude) / 2,
+                    (_storeLatLng.longitude + _destLatLng.longitude) / 2,
                   ),
-                );
-              },
+                  zoom: 14.5,
+                ),
+                markers: _getMarkers(
+                  isDelivered,
+                  isCancelled,
+                  currentStep,
+                  bikeProgress,
+                ),
+                polylines: _getPolylines(isDelivered, currentStep),
+                myLocationEnabled: false,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                compassEnabled: false,
+                rotateGesturesEnabled: true,
+                scrollGesturesEnabled: true,
+                zoomGesturesEnabled: true,
+                gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                  Factory<OneSequenceGestureRecognizer>(
+                    () => EagerGestureRecognizer(),
+                  ),
+                },
+                style: isDark ? _darkMapStyle : null,
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  _fitMapBounds();
+                },
+              ),
+            )
+          else
+            // Custom Painted Realistic Map Graphic
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: Listenable.merge([
+                  _pulseAnimation,
+                  _bikeMovementAnimation,
+                ]),
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _DeliveryMapPainter(
+                      pulseValue: _pulseAnimation.value,
+                      bikeProgress: bikeProgress,
+                      isDark: isDark,
+                      isDelivered: isDelivered,
+                      isCancelled: isCancelled,
+                      primaryColor: AppTheme.primary,
+                    ),
+                  );
+                },
+              ),
+            ),
+
+          // 2. Top-right Floating Action Controls (Recenter & Map/Radar View Switcher)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_useGoogleMap)
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _fitMapBounds();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (isDark ? const Color(0xFF0F172A) : Colors.white)
+                            .withValues(alpha: 0.92),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.my_location_rounded,
+                        size: 18,
+                        color: Color(0xFF0284C7),
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      _useGoogleMap = !_useGoogleMap;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (isDark ? const Color(0xFF0F172A) : Colors.white)
+                          .withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _useGoogleMap
+                              ? Icons.map_rounded
+                              : Icons.radar_rounded,
+                          size: 14,
+                          color: AppTheme.primary,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _useGoogleMap ? "Google Map" : "3D Radar",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -1967,7 +2255,6 @@ class _DeliveryMapPainter extends CustomPainter {
       final tangent = metric.getTangentForOffset(traveledLength);
       if (tangent != null && !isCancelled) {
         final bikePos = tangent.position;
-        final bikeAngle = tangent.angle;
 
         // Scooter Radar Pulse
         if (!isDelivered) {
