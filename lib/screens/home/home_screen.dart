@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,9 @@ import '../../widgets/custom_text.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/order_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/dashboard_active_order_card.dart';
 import '../../utils/cart_animation_helper.dart';
 import '../cart_screen.dart';
 import 'widgets/homepage_section_parser.dart';
@@ -67,10 +71,21 @@ class _HomeScreenState extends State<HomeScreen>
 
     CartAnimationHelper.cartBounceNotifier.addListener(_onCartBounceTrigger);
 
+    _orderPollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final orderProv = context.read<OrderProvider>();
+      if (auth.isLoggedIn && auth.user != null && orderProv.activeOrder != null) {
+        orderProv.fetchUserOrders(storeId: '', phone: auth.user!.phone);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAll();
     });
   }
+
+  Timer? _orderPollTimer;
 
   void _onCartBounceTrigger() {
     if (mounted) {
@@ -81,10 +96,18 @@ class _HomeScreenState extends State<HomeScreen>
   void _refreshAll() {
     context.read<HomeProvider>().fetchHomepage();
     context.read<SettingsProvider>().fetchSettings();
+    final auth = context.read<AuthProvider>();
+    if (auth.isLoggedIn && auth.user != null) {
+      context.read<OrderProvider>().fetchUserOrders(
+        storeId: '',
+        phone: auth.user!.phone,
+      );
+    }
   }
 
   @override
   void dispose() {
+    _orderPollTimer?.cancel();
     CartAnimationHelper.cartBounceNotifier.removeListener(_onCartBounceTrigger);
     _cartBounceController.dispose();
     _searchController.dispose();
@@ -134,6 +157,19 @@ class _HomeScreenState extends State<HomeScreen>
                   SliverToBoxAdapter(
                     child: _buildAnnouncementBar(announcement),
                   ),
+
+                // Active Order Live Tracking Card on Dashboard
+                Consumer<OrderProvider>(
+                  builder: (context, orderProv, _) {
+                    final activeOrder = orderProv.activeOrder;
+                    if (activeOrder == null) {
+                      return const SliverToBoxAdapter(child: SizedBox.shrink());
+                    }
+                    return SliverToBoxAdapter(
+                      child: DashboardActiveOrderCard(order: activeOrder),
+                    );
+                  },
+                ),
 
                 if (provider.isLoading)
                   _buildShimmerLoading()

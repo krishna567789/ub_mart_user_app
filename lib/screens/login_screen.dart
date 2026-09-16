@@ -27,8 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
       TextEditingController(); // Optional name for new users
 
   bool _otpSent = false;
-  bool _isNewUser =
-      true; // We don't know yet, but we provide the field just in case
   final smartAuth = SmartAuth.instance;
 
   @override
@@ -53,14 +51,24 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _otpSent = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Mock OTP sent! Please use 123456 to login."),
-        ),
-      );
-
-      // Auto-fill mock OTP for easier testing right now
-      _otpController.text = "123456";
+      final otpVal = authProvider.debugOtp;
+      if (otpVal != null && otpVal.isNotEmpty) {
+        _otpController.text = otpVal;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("OTP auto-filled: $otpVal"),
+            backgroundColor: AppTheme.primary,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("OTP sent successfully to $phone"),
+            backgroundColor: AppTheme.primary,
+          ),
+        );
+      }
 
       // Start listening for SMS (using User Consent API)
       final res = await smartAuth.getSmsWithUserConsentApi();
@@ -83,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final storeId = storeProvider.selectedStore?.id?.isNotEmpty == true
+    final storeId = (storeProvider.selectedStore?.id.isNotEmpty ?? false)
         ? storeProvider.selectedStore!.id
         : ApiConfig.defaultStoreId;
 
@@ -181,8 +189,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             validator: (val) {
-              if (val == null || val.trim().length < 10)
+              if (val == null || val.trim().length < 10) {
                 return "Enter valid 10-digit number";
+              }
               return null;
             },
           ),
@@ -302,11 +311,37 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               validator: (val) {
-                if (val == null || val.trim().length < 6)
+                if (val == null || val.trim().length < 6) {
                   return "Enter 6-digit OTP";
+                }
                 return null;
               },
+              onCompleted: (pin) => _verifyOtp(),
             ),
+          ),
+          Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              if (auth.debugOtp != null && auth.debugOtp!.isNotEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Center(
+                    child: ActionChip(
+                      avatar: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+                      label: Text(
+                        "Auto-fill OTP: ${auth.debugOtp}",
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      backgroundColor: AppTheme.primary,
+                      onPressed: () {
+                        _otpController.text = auth.debugOtp!;
+                        _verifyOtp();
+                      },
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
           const SizedBox(height: 16),
           // Optional Name field if the user wants to set it during registration

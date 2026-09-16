@@ -6,7 +6,7 @@ import '../models/product_model.dart';
 import '../services/api_service.dart';
 
 class ProductProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService = apiService;
 
   List<MainCategoryModel> _mainCategories = [];
   List<CategoryModel> _categories = [];
@@ -19,6 +19,7 @@ class ProductProvider with ChangeNotifier {
   List<CategoryModel> get categories => _categories;
   List<SubCategoryModel> get subCategories => _subCategories;
   List<ProductModel> get products => _products;
+  List<ProductModel> get allProducts => _products;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 

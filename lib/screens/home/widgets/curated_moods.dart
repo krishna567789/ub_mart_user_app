@@ -12,30 +12,34 @@ class CuratedMoods extends StatelessWidget {
       {
         "title": "Late Night 🌙",
         "subtitle": "Munchies",
-        "color": const Color(0xFFE9D5FF), // soft purple
+        "color": const Color(0xFFE9D5FF),
         "textColor": const Color(0xFF7E22CE),
-        "img": "https://images.unsplash.com/photo-1590846406792-0adc7f138fbc?w=400&q=80",
+        "img":
+            "https://images.unsplash.com/photo-1590846406792-0adc7f138fbc?w=400&q=80",
       },
       {
         "title": "Pre-Workout ⚡️",
         "subtitle": "High Protein",
-        "color": const Color(0xFFBBF7D0), // soft green
+        "color": const Color(0xFFBBF7D0),
         "textColor": const Color(0xFF15803D),
-        "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80",
+        "img":
+            "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80",
       },
       {
         "title": "Rainy Day ☕️",
         "subtitle": "Chai & Dip",
-        "color": const Color(0xFFFED7AA), // soft orange
+        "color": const Color(0xFFFED7AA),
         "textColor": const Color(0xFFB45309),
-        "img": "https://images.unsplash.com/photo-1515823662972-da6a2b4d3002?w=400&q=80",
+        "img":
+            "https://images.unsplash.com/photo-1515823662972-da6a2b4d3002?w=400&q=80",
       },
       {
         "title": "Chef's Pantry 👨‍🍳",
         "subtitle": "Artisanal",
-        "color": const Color(0xFFFEF08A), // soft yellow
+        "color": const Color(0xFFFEF08A),
         "textColor": const Color(0xFFA16207),
-        "img": "https://images.unsplash.com/photo-1556910103-1c02745a8e8f?w=400&q=80",
+        "img":
+            "https://images.unsplash.com/photo-1556910103-1c02745a8e8f?w=400&q=80",
       },
     ];
 
@@ -105,7 +109,10 @@ class CuratedMoods extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: mood["color"] as Color,
                                 borderRadius: BorderRadius.circular(4),

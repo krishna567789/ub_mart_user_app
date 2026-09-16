@@ -61,6 +61,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
+    // Safety check: Validate wallet balance if paying via WALLET
+    if (_paymentMethod == 'WALLET') {
+      final currentBalance = auth.user?.walletBalance ?? 0;
+      if (currentBalance < cart.grandTotal) {
+        final needed = cart.grandTotal - currentBalance;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Insufficient Wallet Balance! Available: ₹${currentBalance.toStringAsFixed(0)}, Need: ₹${cart.grandTotal.toStringAsFixed(0)} (Short by ₹${needed.toStringAsFixed(0)}).",
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        return;
+      }
+    }
+
     AddressModel addressToUse;
     if (_selectedAddress != null) {
       addressToUse = _selectedAddress!;
@@ -107,6 +124,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (createdOrder != null && mounted) {
+      // Refresh user to immediately reflect any wallet balance deduction
+      await auth.refreshUser();
+
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -298,7 +319,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     title: Text(
                       "UB Wallet (Balance: ₹${auth.user?.walletBalance.toStringAsFixed(0) ?? '0'})",
                     ),
-                    subtitle: const Text("Deduct from internal wallet"),
+                    subtitle: Text(
+                      (auth.user?.walletBalance ?? 0) >= cart.grandTotal
+                          ? "Deduct from internal wallet"
+                          : "Insufficient balance (Short by ₹${(cart.grandTotal - (auth.user?.walletBalance ?? 0)).toStringAsFixed(0)})",
+                      style: TextStyle(
+                        color: (auth.user?.walletBalance ?? 0) >= cart.grandTotal
+                            ? Colors.grey.shade600
+                            : Colors.red.shade700,
+                        fontWeight: (auth.user?.walletBalance ?? 0) >= cart.grandTotal
+                            ? FontWeight.normal
+                            : FontWeight.w600,
+                      ),
+                    ),
                     value: 'WALLET',
                     groupValue: _paymentMethod,
                     onChanged: (val) {

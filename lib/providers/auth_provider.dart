@@ -29,15 +29,23 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  String? _debugOtp;
+  String? get debugOtp => _debugOtp;
+
   // Send OTP (Step 1)
   Future<bool> sendOtp(String phone) async {
     _isLoading = true;
     _errorMessage = null;
+    _debugOtp = null;
     notifyListeners();
 
     try {
       final response = await apiService.post('/auth/send-otp', body: {'phone': phone});
       if (response != null && response['success'] == true) {
+        final returnedOtp = response['otp'] ?? response['debugOtp'];
+        if (returnedOtp != null) {
+          _debugOtp = returnedOtp.toString();
+        }
         _isLoading = false;
         notifyListeners();
         return true;

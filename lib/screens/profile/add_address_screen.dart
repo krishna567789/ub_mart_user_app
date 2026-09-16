@@ -44,12 +44,18 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     setState(() => _isLoading = true);
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
+    // Realistic default coordinates for express delivery cluster around store
+    final double defaultLat = 28.5706 + ((DateTime.now().millisecond % 40) - 20) * 0.0008;
+    final double defaultLng = 77.3260 + ((DateTime.now().microsecond % 40) - 20) * 0.0008;
+
     final newAddress = AddressModel(
       tag: _selectedTag,
       completeAddress: _addressController.text.trim(),
       receiverName: _nameController.text.trim(),
       receiverPhone: _phoneController.text.trim(),
+      lat: defaultLat,
+      lng: defaultLng,
     );
 
     await authProvider.addAddress(newAddress);

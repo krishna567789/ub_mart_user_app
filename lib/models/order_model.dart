@@ -64,6 +64,8 @@ class OrderModel {
   final List<OrderItemModel> items;
   final double itemTotal;
   final double deliveryFee;
+  final double deliveryTip;
+  final String? couponCode;
   final double taxAmount;
   final double discountAmount;
   final double totalAmount;
@@ -71,6 +73,9 @@ class OrderModel {
   final String paymentMethod; // COD, ONLINE, WALLET
   final String paymentStatus; // PENDING, PAID, FAILED
   final Map<String, dynamic>? assignedRider;
+  final List<String> deliveryInstructions;
+  final double? rating;
+  final String? review;
   final DateTime? createdAt;
 
   OrderModel({
@@ -83,6 +88,8 @@ class OrderModel {
     required this.items,
     required this.itemTotal,
     required this.deliveryFee,
+    this.deliveryTip = 0.0,
+    this.couponCode,
     required this.taxAmount,
     required this.discountAmount,
     required this.totalAmount,
@@ -90,6 +97,9 @@ class OrderModel {
     required this.paymentMethod,
     required this.paymentStatus,
     this.assignedRider,
+    this.deliveryInstructions = const [],
+    this.rating,
+    this.review,
     this.createdAt,
   });
 
@@ -110,6 +120,13 @@ class OrderModel {
         ? Map<String, dynamic>.from(json['deliveryAddress'])
         : <String, dynamic>{};
 
+    final instructions = (json['deliveryInstructions'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
+
+    final ratingVal = json['rating'] != null ? (json['rating'] as num).toDouble() : null;
+
     return OrderModel(
       id: json['_id'] ?? '',
       orderId: json['orderId'] ?? '',
@@ -120,12 +137,20 @@ class OrderModel {
       items: itemsList,
       itemTotal: (json['itemTotal'] ?? 0).toDouble(),
       deliveryFee: (json['deliveryFee'] ?? 0).toDouble(),
+      deliveryTip: (json['deliveryTip'] ?? 0).toDouble(),
+      couponCode: json['couponCode'] as String?,
       taxAmount: (json['taxAmount'] ?? 0).toDouble(),
       discountAmount: (json['discountAmount'] ?? 0).toDouble(),
       totalAmount: (json['totalAmount'] ?? 0).toDouble(),
       status: json['status'] ?? 'PENDING',
       paymentMethod: json['paymentMethod'] ?? 'COD',
       paymentStatus: json['paymentStatus'] ?? 'PENDING',
+      assignedRider: json['assignedRider'] is Map
+          ? Map<String, dynamic>.from(json['assignedRider'])
+          : null,
+      deliveryInstructions: instructions,
+      rating: ratingVal,
+      review: json['review'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'])
           : null,
@@ -143,12 +168,18 @@ class OrderModel {
       'items': items.map((i) => i.toJson()).toList(),
       'itemTotal': itemTotal,
       'deliveryFee': deliveryFee,
+      'deliveryTip': deliveryTip,
+      'couponCode': couponCode,
       'taxAmount': taxAmount,
       'discountAmount': discountAmount,
       'totalAmount': totalAmount,
       'status': status,
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentStatus,
+      'deliveryInstructions': deliveryInstructions,
+      'rating': rating,
+      'review': review,
+      'createdAt': createdAt?.toIso8601String(),
     };
   }
 }

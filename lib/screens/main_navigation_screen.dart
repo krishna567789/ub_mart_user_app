@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/order_provider.dart';
 import '../utils/cart_animation_helper.dart';
 import '../widgets/custom_text.dart';
 import 'home/home_screen.dart';
@@ -59,6 +60,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       if (auth.isLoggedIn) {
         Provider.of<CartProvider>(context, listen: false).loadCartFromBackend();
         Provider.of<FavoritesProvider>(context, listen: false).loadFavoritesFromBackend();
+        if (auth.user != null) {
+          Provider.of<OrderProvider>(context, listen: false).fetchUserOrders(
+            storeId: '',
+            phone: auth.user!.phone,
+          );
+        }
       }
     });
   }
