@@ -9,6 +9,7 @@ import '../providers/order_provider.dart';
 import '../models/user_model.dart';
 import '../theme/app_theme.dart';
 import 'order_success_screen.dart';
+import 'profile/add_address_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -209,16 +210,81 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                 ),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _selectedAddress = null;
-                  });
-                },
-                icon: const Icon(Icons.add),
-                label: const Text("Add New Address"),
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AddAddressScreen()),
+                      );
+                      if (!context.mounted) return;
+                      final updatedAuth = Provider.of<AuthProvider>(context, listen: false);
+                      if (updatedAuth.user != null && updatedAuth.user!.addresses.isNotEmpty) {
+                        setState(() {
+                          _selectedAddress = updatedAuth.user!.addresses.first;
+                        });
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: BorderSide(color: AppTheme.primary, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                    label: const Text(
+                      "+ Add New Address with Google Map",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               ),
-            ] else
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddAddressScreen()),
+                    );
+                    if (!context.mounted) return;
+                    final updatedAuth = Provider.of<AuthProvider>(context, listen: false);
+                    if (updatedAuth.user != null && updatedAuth.user!.addresses.isNotEmpty) {
+                      setState(() {
+                        _selectedAddress = updatedAuth.user!.addresses.first;
+                      });
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.location_on_rounded, size: 20),
+                  label: const Text(
+                    "Pin Delivery Address on Google Map",
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text("OR ENTER MANUALLY", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 12),
               Form(
                 key: _formKey,
                 child: Column(
@@ -277,6 +343,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
               ),
+            ],
 
             const SizedBox(height: 24),
 

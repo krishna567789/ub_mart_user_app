@@ -7,7 +7,11 @@ import '../providers/cart_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
 import '../widgets/shimmer_loaders.dart';
+import '../widgets/veg_non_veg_badge.dart';
+import '../widgets/custom_text.dart';
+import '../widgets/smart_image.dart';
 import '../utils/cart_animation_helper.dart';
+import '../services/deep_link_service.dart';
 import 'cart_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -31,6 +35,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   List<ProductModel> _similarProducts = [];
   bool _isLoadingSimilar = true;
+  final Set<String> _selectedBundleIds = {};
 
   @override
   void initState() {
@@ -39,6 +44,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _currentRating = widget.product.rating;
     _currentReviewCount = widget.product.reviewCount;
     _reviews = List.from(widget.product.reviews);
+    _selectedBundleIds.add(widget.product.id);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadReviews();
@@ -66,8 +72,43 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       setState(() {
         _similarProducts = similar;
         _isLoadingSimilar = false;
+        for (final p in similar.take(2)) {
+          _selectedBundleIds.add(p.id);
+        }
       });
     }
+  }
+
+  void _addBundleToCart(List<ProductModel> items, CartProvider cart) {
+    if (items.isEmpty) return;
+    HapticFeedback.mediumImpact();
+    for (final item in items) {
+      final variant = item.id == widget.product.id
+          ? _selectedVariant
+          : item.defaultVariant;
+      cart.addItem(item, variant);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: CustomText(
+                "Added ${items.length} combo items to your cart!",
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF16A34A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(milliseconds: 1800),
+      ),
+    );
   }
 
   void _showAddReviewSheet(BuildContext context) {
@@ -326,7 +367,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   backgroundColor: isLight ? Colors.white.withValues(alpha: 0.9) : Colors.black54,
                   child: IconButton(
                     icon: Icon(Icons.share_outlined, color: titleColor, size: 19),
-                    onPressed: () {},
+                    onPressed: () => DeepLinkService.showShareProductSheet(context, widget.product),
                   ),
                 ),
               ),
@@ -463,24 +504,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 12),                  // Veg / Non-Veg Indicator
+                  if (widget.product.foodType != FoodType.none) ...[
+                    VegNonVegBadge(
+                      type: widget.product.foodType,
+                      size: 15,
+                      showLabel: true,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // Product Name
-                  Text(
+                  CustomText(
                     widget.product.name,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: titleColor,
-                      height: 1.2,
-                    ),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: titleColor,
+                    height: 1.2,
                   ),
 
                   if (widget.product.brand != null && widget.product.brand!.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(
+                    CustomText(
                       "Brand: ${widget.product.brand!}",
-                      style: TextStyle(fontSize: 12, color: subtextColor, fontWeight: FontWeight.w600),
+                      fontSize: 12,
+                      color: subtextColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ],
 
@@ -519,8 +568,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           "$_currentReviewCount verified remarks & ratings",
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtextColor),
                         ),
-                        const Spacer(),
-                        const Icon(Icons.verified, color: Color(0xFF16A34A), size: 16),
                       ],
                     ),
                   ),
@@ -532,19 +579,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
+                      CustomText.price(
                         "₹${price.toStringAsFixed(0)}",
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: titleColor),
+                        fontSize: 26,
+                        color: titleColor,
                       ),
                       if (hasDiscount) ...[
                         const SizedBox(width: 8),
-                        Text(
+                        CustomText(
                           "MRP ₹${origPrice.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
-                          ),
+                          fontSize: 14,
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -553,9 +599,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             color: const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
+                          child: CustomText(
                             "${discountPct.toStringAsFixed(0)}% OFF",
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF16A34A)),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF16A34A),
+                          ),
+                        ),
+                      ],
+                      if (_selectedVariant.stock > 0 && _selectedVariant.stock <= 5) ...[
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFECACA), width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.local_fire_department_rounded, size: 13, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 3),
+                              CustomText(
+                                "Only ${_selectedVariant.stock} left!",
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFDC2626),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -564,9 +636,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   if (hasDiscount)
                     Padding(
                       padding: const EdgeInsets.only(top: 2.0),
-                      child: Text(
+                      child: CustomText(
                         "You save ₹${savings.toStringAsFixed(0)} on this unit",
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.w600),
+                        fontSize: 11,
+                        color: const Color(0xFF16A34A),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
 
@@ -723,7 +797,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     style: TextStyle(fontSize: 13, color: subtextColor, height: 1.5),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
+
+                  // ── Frequently Bought Together Bundle Card ──
+                  _buildFrequentlyBoughtTogether(
+                    context,
+                    cart,
+                    primaryColor,
+                    titleColor,
+                    subtextColor,
+                  ),
+
+                  const SizedBox(height: 24),
                   const Divider(),
                   const SizedBox(height: 16),
 
@@ -1030,4 +1115,392 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
+
+  Widget _buildFrequentlyBoughtTogether(
+    BuildContext context,
+    CartProvider cart,
+    Color primaryColor,
+    Color titleColor,
+    Color subtextColor,
+  ) {
+    // 1. Gather candidate bundle products (2 products related or from catalog)
+    final Set<String> seenIds = {widget.product.id};
+    final List<ProductModel> candidates = [];
+
+    for (final p in _similarProducts) {
+      if (!seenIds.contains(p.id) && p.defaultVariant.stock > 0) {
+        candidates.add(p);
+        seenIds.add(p.id);
+        if (candidates.length >= 2) break;
+      }
+    }
+
+    if (candidates.length < 2) {
+      final allProds = Provider.of<ProductProvider>(context, listen: false).products;
+      for (final p in allProds) {
+        if (!seenIds.contains(p.id) && p.defaultVariant.stock > 0) {
+          candidates.add(p);
+          seenIds.add(p.id);
+          if (candidates.length >= 2) break;
+        }
+      }
+    }
+
+    if (candidates.isEmpty) return const SizedBox.shrink();
+
+    final bundleItems = [widget.product, ...candidates];
+
+    // Ensure initial items are selected
+    if (_selectedBundleIds.isEmpty) {
+      _selectedBundleIds.addAll(bundleItems.map((p) => p.id));
+    }
+
+    final selectedItems =
+        bundleItems.where((p) => _selectedBundleIds.contains(p.id)).toList();
+
+    double totalComboPrice = 0;
+    double totalComboMrp = 0;
+
+    for (final p in selectedItems) {
+      if (p.id == widget.product.id) {
+        totalComboPrice += _selectedVariant.price;
+        totalComboMrp +=
+            (_selectedVariant.originalPrice ?? _selectedVariant.price);
+      } else {
+        totalComboPrice += p.defaultVariant.price;
+        totalComboMrp +=
+            (p.defaultVariant.originalPrice ?? p.defaultVariant.price);
+      }
+    }
+
+    final double totalComboSavings = totalComboMrp - totalComboPrice;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 16,
+                      color: Color(0xFFD97706),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const CustomText(
+                    "Frequently Bought Together",
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const CustomText(
+                  "BEST COMBO",
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF16A34A),
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const CustomText(
+            "Customers usually buy these items together",
+            fontSize: 11,
+            color: Color(0xFF64748B),
+          ),
+          const SizedBox(height: 14),
+
+          // Bundle items chain
+          Column(
+            children: List.generate(bundleItems.length, (index) {
+              final item = bundleItems[index];
+              final isCurrent = item.id == widget.product.id;
+              final variant = isCurrent ? _selectedVariant : item.defaultVariant;
+              final isChecked = _selectedBundleIds.contains(item.id);
+              final hasDiscount = (variant.originalPrice ?? 0) > variant.price;
+
+              return Column(
+                children: [
+                  if (index > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 44),
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.add,
+                                size: 14,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey.shade200,
+                              thickness: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        if (isChecked) {
+                          if (selectedItems.length > 1) {
+                            _selectedBundleIds.remove(item.id);
+                          }
+                        } else {
+                          _selectedBundleIds.add(item.id);
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isChecked
+                            ? primaryColor.withValues(alpha: 0.04)
+                            : const Color(0xFFFAFAFA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isChecked
+                              ? primaryColor.withValues(alpha: 0.4)
+                              : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          // Custom Checkbox
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: isChecked ? primaryColor : Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isChecked
+                                    ? primaryColor
+                                    : Colors.grey.shade400,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: isChecked
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 14,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Thumbnail Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: SmartImage(
+                                imageUrl: item.images.isNotEmpty
+                                    ? item.images.first
+                                    : '',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (item.foodType != FoodType.none) ...[
+                                      VegNonVegBadge(
+                                        type: item.foodType,
+                                        size: 11,
+                                      ),
+                                      const SizedBox(width: 5),
+                                    ],
+                                    Expanded(
+                                      child: CustomText(
+                                        item.name,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF0F172A),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    CustomText(
+                                      variant.size,
+                                      fontSize: 11,
+                                      color: const Color(0xFF64748B),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    CustomText.price(
+                                      "₹${variant.price.toStringAsFixed(0)}",
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                    if (hasDiscount) ...[
+                                      const SizedBox(width: 4),
+                                      CustomText(
+                                        "₹${(variant.originalPrice ?? 0).toStringAsFixed(0)}",
+                                        fontSize: 10,
+                                        color: const Color(0xFF94A3B8),
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 12),
+
+          // Total & 1-Tap Add All Button
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomText(
+                      "Combo for ${selectedItems.length} items",
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF64748B),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        CustomText.price(
+                          "₹${totalComboPrice.toStringAsFixed(0)}",
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF0F172A),
+                        ),
+                        if (totalComboSavings > 0) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: CustomText(
+                              "Save ₹${totalComboSavings.toStringAsFixed(0)}",
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              ElevatedButton.icon(
+                onPressed: selectedItems.isEmpty
+                    ? null
+                    : () => _addBundleToCart(selectedItems, cart),
+                icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                label: CustomText(
+                  "Add ${selectedItems.length} to Cart",
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 11,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
+

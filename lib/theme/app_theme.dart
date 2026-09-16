@@ -26,11 +26,11 @@ class AppTheme {
 
     // Update global static accessors dynamically
     primary = primaryColor;
-    primaryLight = primaryColor.withOpacity(0.12);
+    primaryLight = primaryColor.withValues(alpha: 0.12);
     final hsl = HSLColor.fromColor(primaryColor);
     primaryDark = hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
     accent = accentColor;
-    accentLight = accentColor.withOpacity(0.12);
+    accentLight = accentColor.withValues(alpha: 0.12);
     background = backgroundColor;
     textPrimary = textPrimaryColor;
     textSecondary = isLight ? Colors.grey.shade600 : const Color(0xFF94A3B8);
@@ -41,6 +41,8 @@ class AppTheme {
       useMaterial3: true,
       brightness: baseBrightness,
       primaryColor: primaryColor,
+      fontFamily: GoogleFonts.poppins().fontFamily,
+      primaryTextTheme: GoogleFonts.poppinsTextTheme(baseTextTheme),
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         brightness: baseBrightness,

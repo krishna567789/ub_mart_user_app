@@ -10,7 +10,6 @@ import '../widgets/custom_text.dart';
 import 'home/home_screen.dart';
 import 'categories_screen.dart';
 import 'cart_screen.dart';
-import 'order_history_screen.dart';
 import 'profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -32,14 +31,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     HomeScreen(),
     CategoriesScreen(),
     CartScreen(),
-    OrderHistoryScreen(),
     ProfileScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    _currentIndex = widget.initialIndex > 3 ? 3 : widget.initialIndex;
 
     _cartBounceController = AnimationController(
       vsync: this,
@@ -57,6 +55,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       final auth = Provider.of<AuthProvider>(context, listen: false);
       // First load saved user to restore auth token
       await auth.loadSavedUser();
+      if (!mounted) return;
       if (auth.isLoggedIn) {
         Provider.of<CartProvider>(context, listen: false).loadCartFromBackend();
         Provider.of<FavoritesProvider>(context, listen: false).loadFavoritesFromBackend();
@@ -119,7 +118,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isLight ? 0.05 : 0.2),
+              color: Colors.black.withValues(alpha: isLight ? 0.05 : 0.2),
               blurRadius: 10,
               offset: const Offset(0, -3),
             ),
@@ -181,14 +180,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
               label: "Cart",
             ),
             const BottomNavigationBarItem(
-              icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long),
-              label: "Orders",
-            ),
-            const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
-              label: "Profile",
+              label: "Account",
             ),
           ],
         ),
@@ -302,7 +296,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                               ),
                               child: ClipOval(
                                 child: item.product.images.isNotEmpty
-                                    ? Image.network(item.product.images.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.shopping_bag, size: 18, color: Colors.grey))
+                                    ? Image.network(item.product.images.first, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const Icon(Icons.shopping_bag, size: 18, color: Colors.grey))
                                     : const Icon(Icons.shopping_bag, size: 18, color: Colors.grey),
                               ),
                             ),

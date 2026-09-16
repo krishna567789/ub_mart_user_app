@@ -31,6 +31,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     with TickerProviderStateMixin {
   late OrderModel _order;
   Timer? _pollingTimer;
+  Timer? _countdownTimer;
+  int _secondsRemaining = 15 * 60;
   bool _isRefreshing = false;
   bool _itemsExpanded = true;
 
@@ -48,6 +50,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   static const double _defaultStoreLat = 28.5706;
   static const double _defaultStoreLng = 77.3260;
 
+  BitmapDescriptor? _storePinIcon;
+  BitmapDescriptor? _destPinIcon;
+  BitmapDescriptor? _riderPinIcon;
+
   LatLng get _storeLatLng => const LatLng(_defaultStoreLat, _defaultStoreLng);
 
   LatLng get _destLatLng {
@@ -56,60 +62,162 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     return LatLng(lat, lng);
   }
 
-  LatLng _getRiderLatLng(double progress) {
-    if (_order.assignedRider != null &&
-        _order.assignedRider!['lat'] != null &&
-        _order.assignedRider!['lng'] != null) {
-      return LatLng(
-        (_order.assignedRider!['lat'] as num).toDouble(),
-        (_order.assignedRider!['lng'] as num).toDouble(),
-      );
-    }
-    final s = _storeLatLng;
-    final d = _destLatLng;
-    return LatLng(
-      s.latitude + (d.latitude - s.latitude) * progress,
-      s.longitude + (d.longitude - s.longitude) * progress,
+  // Generate smooth cubic bezier curve points matching the realistic road arc
+  List<LatLng> _getCurvedRoutePoints(LatLng start, LatLng end, {int samples = 50}) {
+    final dLat = end.latitude - start.latitude;
+    final dLng = end.longitude - start.longitude;
+
+    final p0 = start;
+    final p1 = LatLng(
+      start.latitude + dLat * 0.25 - dLng * 0.22,
+      start.longitude + dLng * 0.35 + dLat * 0.22,
     );
+    final p2 = LatLng(
+      start.latitude + dLat * 0.70 + dLng * 0.22,
+      start.longitude + dLng * 0.65 - dLat * 0.22,
+    );
+    final p3 = end;
+
+    final points = <LatLng>[];
+    for (int i = 0; i <= samples; i++) {
+      final t = i / samples;
+      final u = 1.0 - t;
+      final tt = t * t;
+      final uu = u * u;
+      final uuu = uu * u;
+      final ttt = tt * t;
+
+      final lat = uuu * p0.latitude +
+          3 * uu * t * p1.latitude +
+          3 * u * tt * p2.latitude +
+          ttt * p3.latitude;
+
+      final lng = uuu * p0.longitude +
+          3 * uu * t * p1.longitude +
+          3 * u * tt * p2.longitude +
+          ttt * p3.longitude;
+
+      points.add(LatLng(lat, lng));
+    }
+    return points;
   }
 
-  List<LatLng> _generateRoutePoints(LatLng start, LatLng end) {
-    final latDiff = end.latitude - start.latitude;
-    final lngDiff = end.longitude - start.longitude;
+  // Get animated point on curve at progress t (0.0 to 1.0)
+  LatLng _getPointOnCurve(LatLng start, LatLng end, double t) {
+    final dLat = end.latitude - start.latitude;
+    final dLng = end.longitude - start.longitude;
 
-    return [
-      start,
-      LatLng(start.latitude + latDiff * 0.25, start.longitude + lngDiff * 0.05),
-      LatLng(start.latitude + latDiff * 0.40, start.longitude + lngDiff * 0.35),
-      LatLng(start.latitude + latDiff * 0.65, start.longitude + lngDiff * 0.50),
-      LatLng(start.latitude + latDiff * 0.85, start.longitude + lngDiff * 0.88),
-      end,
-    ];
+    final p0 = start;
+    final p1 = LatLng(
+      start.latitude + dLat * 0.25 - dLng * 0.22,
+      start.longitude + dLng * 0.35 + dLat * 0.22,
+    );
+    final p2 = LatLng(
+      start.latitude + dLat * 0.70 + dLng * 0.22,
+      start.longitude + dLng * 0.65 - dLat * 0.22,
+    );
+    final p3 = end;
+
+    final clampedT = t.clamp(0.0, 1.0);
+    final u = 1.0 - clampedT;
+    final tt = clampedT * clampedT;
+    final uu = u * u;
+    final uuu = uu * u;
+    final ttt = tt * clampedT;
+
+    final lat = uuu * p0.latitude +
+        3 * uu * clampedT * p1.latitude +
+        3 * u * tt * p2.latitude +
+        ttt * p3.latitude;
+
+    final lng = uuu * p0.longitude +
+        3 * uu * clampedT * p1.longitude +
+        3 * u * tt * p2.longitude +
+        ttt * p3.longitude;
+
+    return LatLng(lat, lng);
   }
 
-  Set<Polyline> _getPolylines(bool isDelivered, int currentStep) {
-    final fullRoute = _generateRoutePoints(_storeLatLng, _destLatLng);
-    final polylineColor = isDelivered
-        ? const Color(0xFF10B981)
-        : const Color(0xFF0284C7);
+  // Generates animated dual polylines (traveled solid cyan-teal path + remaining dashed path)
+  Set<Polyline> _getPolylines(bool isDelivered, double bikeProgress) {
+    final fullRoute = _getCurvedRoutePoints(_storeLatLng, _destLatLng);
+
+    if (isDelivered) {
+      return {
+        // Delivered: Emerald green route with glow
+        Polyline(
+          polylineId: const PolylineId('route_delivered_halo'),
+          points: fullRoute,
+          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+          width: 9,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+        ),
+        Polyline(
+          polylineId: const PolylineId('route_delivered_core'),
+          points: fullRoute,
+          color: const Color(0xFF10B981),
+          width: 5,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+        ),
+      };
+    }
+
+    // Split route dynamically at current animated rider progress
+    final riderLatLng = _getPointOnCurve(_storeLatLng, _destLatLng, bikeProgress);
+    final splitIndex = (bikeProgress * (fullRoute.length - 1)).floor();
+
+    final traveledPoints = <LatLng>[];
+    for (int i = 0; i <= splitIndex && i < fullRoute.length; i++) {
+      traveledPoints.add(fullRoute[i]);
+    }
+    traveledPoints.add(riderLatLng);
+
+    final remainingPoints = <LatLng>[riderLatLng];
+    for (int i = splitIndex + 1; i < fullRoute.length; i++) {
+      remainingPoints.add(fullRoute[i]);
+    }
 
     return {
-      // Glow/halo polyline
+      // 1. Traveled Path (Solid glowing Cyan/Teal corridor)
       Polyline(
-        polylineId: const PolylineId('route_halo'),
-        points: fullRoute,
-        color: polylineColor.withValues(alpha: 0.30),
-        width: 8,
+        polylineId: const PolylineId('route_traveled_halo'),
+        points: traveledPoints,
+        color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
+        width: 9,
         jointType: JointType.round,
         startCap: Cap.roundCap,
         endCap: Cap.roundCap,
       ),
-      // Sharp core route polyline
       Polyline(
-        polylineId: const PolylineId('route_core'),
-        points: fullRoute,
-        color: polylineColor,
+        polylineId: const PolylineId('route_traveled_core'),
+        points: traveledPoints,
+        color: const Color(0xFF0284C7),
         width: 5,
+        jointType: JointType.round,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+      ),
+
+      // 2. Remaining Path (Dashed Amber/Orange route to destination)
+      Polyline(
+        polylineId: const PolylineId('route_remaining_halo'),
+        points: remainingPoints,
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.20),
+        width: 7,
+        jointType: JointType.round,
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+      ),
+      Polyline(
+        polylineId: const PolylineId('route_remaining_core'),
+        points: remainingPoints,
+        color: const Color(0xFFF59E0B),
+        width: 4,
+        patterns: [PatternItem.dash(12), PatternItem.gap(6)],
         jointType: JointType.round,
         startCap: Cap.roundCap,
         endCap: Cap.roundCap,
@@ -117,6 +225,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     };
   }
 
+  // Generates custom styled pins matching the in-app vector map design
   Set<Marker> _getMarkers(
     bool isDelivered,
     bool isCancelled,
@@ -125,27 +234,33 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   ) {
     final markers = <Marker>{};
 
-    // 1. Store Hub Marker
+    // 1. Store Hub Marker (🏪 UB Store Hub)
     markers.add(
       Marker(
         markerId: const MarkerId('store_hub'),
         position: _storeLatLng,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        icon: _storePinIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        anchor: const Offset(0.5, 0.40),
         infoWindow: const InfoWindow(
           title: "🏢 UB Store Hub",
-          snippet: "Express fulfillment dark store",
+          snippet: "Central Express Distribution Center",
         ),
       ),
     );
 
-    // 2. Customer Destination Marker
+    // 2. Customer Destination Marker (🏠 My Location)
     markers.add(
       Marker(
         markerId: const MarkerId('customer_dest'),
         position: _destLatLng,
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          isDelivered ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueRed,
-        ),
+        icon: _destPinIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(
+              isDelivered
+                  ? BitmapDescriptor.hueGreen
+                  : BitmapDescriptor.hueRed,
+            ),
+        anchor: const Offset(0.5, 0.40),
         infoWindow: InfoWindow(
           title: "🏠 ${_order.deliveryAddress.tag.toUpperCase()} (My Location)",
           snippet: _order.deliveryAddress.completeAddress,
@@ -153,25 +268,197 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       ),
     );
 
-    // 3. Delivery Rider Marker (When packing, out for delivery, or delivered)
+    // 3. Smooth Riding Delivery Partner Marker (🛵 UB Express Rider)
     if (!isCancelled && currentStep >= 1) {
-      final riderPos = _getRiderLatLng(bikeProgress);
+      LatLng riderPos;
+      final rawLoc = _order.assignedRider?['currentLocation'];
+      if (rawLoc != null && rawLoc['lat'] != null && rawLoc['lng'] != null) {
+        final rLat = (rawLoc['lat'] as num).toDouble();
+        final rLng = (rawLoc['lng'] as num).toDouble();
+        riderPos = LatLng(rLat, rLng);
+      } else {
+        riderPos = _getPointOnCurve(_storeLatLng, _destLatLng, bikeProgress);
+      }
       markers.add(
         Marker(
           markerId: const MarkerId('delivery_rider'),
           position: riderPos,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            isDelivered ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueOrange,
-          ),
+          icon: _riderPinIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(
+                isDelivered
+                    ? BitmapDescriptor.hueGreen
+                    : BitmapDescriptor.hueOrange,
+              ),
+          anchor: const Offset(0.5, 0.40),
+          zIndexInt: 10,
           infoWindow: InfoWindow(
-            title: "🛵 ${_order.assignedRider?['name'] ?? 'UB Delivery Partner'}",
-            snippet: isDelivered ? "Delivered Successfully" : "Live En-Route (Express)",
+            title: "🛵 ${_order.assignedRider?['name'] ?? 'UB Express Partner'}",
+            snippet: isDelivered ? "Delivered Successfully!" : "En-route with your order",
           ),
         ),
       );
     }
 
     return markers;
+  }
+
+  // Pre-renders custom bitmap icons with emojis and rounded pill badges
+  Future<void> _loadCustomMapIcons() async {
+    try {
+      final storeIcon = await _createCustomPinBitmap(
+        iconText: "🏪",
+        label: "UB Store Hub",
+        color: const Color(0xFF3B82F6),
+      );
+      final destIcon = await _createCustomPinBitmap(
+        iconText: "🏠",
+        label: "My Location",
+        color: const Color(0xFF10B981),
+      );
+      final riderIcon = await _createCustomPinBitmap(
+        iconText: "🛵",
+        label: "UB Express",
+        color: const Color(0xFFF59E0B),
+      );
+
+      if (mounted) {
+        setState(() {
+          _storePinIcon = storeIcon;
+          _destPinIcon = destIcon;
+          _riderPinIcon = riderIcon;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error generating custom map icons: $e");
+    }
+  }
+
+  static Future<BitmapDescriptor> _createCustomPinBitmap({
+    required String iconText,
+    required String label,
+    required Color color,
+  }) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+
+    const double canvasWidth = 140.0;
+    const double canvasHeight = 90.0;
+    const double centerX = canvasWidth / 2;
+    const double circleRadius = 22.0;
+    const double circleCenterY = 28.0;
+
+    // Drop shadow for circular pin
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.25)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawCircle(
+      const Offset(centerX, circleCenterY + 2),
+      circleRadius + 2,
+      shadowPaint,
+    );
+
+    // Circular Pin Background
+    final pinPaint = Paint()..color = color;
+    canvas.drawCircle(
+      const Offset(centerX, circleCenterY),
+      circleRadius,
+      pinPaint,
+    );
+
+    // White Pin Border
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(
+      const Offset(centerX, circleCenterY),
+      circleRadius,
+      borderPaint,
+    );
+
+    // Centered Emoji Icon
+    final iconPainter = TextPainter(
+      text: TextSpan(
+        text: iconText,
+        style: const TextStyle(fontSize: 20),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    iconPainter.paint(
+      canvas,
+      Offset(
+        centerX - iconPainter.width / 2,
+        circleCenterY - iconPainter.height / 2,
+      ),
+    );
+
+    // Label Text Pill below Pin
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: Color(0xFF0F172A),
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+
+    final double pillWidth = textPainter.width + 16;
+    const double pillHeight = 22.0;
+    final double pillTop = circleCenterY + circleRadius + 6;
+    final pillRect = Rect.fromCenter(
+      center: Offset(centerX, pillTop + pillHeight / 2),
+      width: pillWidth,
+      height: pillHeight,
+    );
+
+    // Pill Shadow
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        pillRect.translate(0, 1.5),
+        const Radius.circular(6),
+      ),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.20)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+
+    // Pill Background (Clean White)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(pillRect, const Radius.circular(6)),
+      Paint()..color = Colors.white,
+    );
+
+    // Pill Border
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(pillRect, const Radius.circular(6)),
+      Paint()
+        ..color = Colors.black12
+        ..strokeWidth = 1.0
+        ..style = PaintingStyle.stroke,
+    );
+
+    // Paint label text
+    textPainter.paint(
+      canvas,
+      Offset(
+        centerX - textPainter.width / 2,
+        pillTop + (pillHeight - textPainter.height) / 2,
+      ),
+    );
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(
+      canvasWidth.toInt(),
+      canvasHeight.toInt(),
+    );
+    final ByteData? byteData = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    final Uint8List uint8List = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.bytes(uint8List);
   }
 
   void _fitMapBounds() {
@@ -203,6 +490,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   void initState() {
     super.initState();
     _order = widget.order;
+    _loadCustomMapIcons();
 
     // Pulse animation for pins and live radar
     _pulseController = AnimationController(
@@ -231,8 +519,42 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       duration: const Duration(seconds: 3),
     )..repeat();
 
+    // Start 15-min delivery countdown
+    _initCountdownTimer();
+
     // Auto-polling every 12 seconds for live status updates
     _startPolling();
+  }
+
+  void _initCountdownTimer() {
+    _countdownTimer?.cancel();
+    if (_order.status == 'DELIVERED' || _order.status == 'CANCELLED') {
+      _secondsRemaining = 0;
+      return;
+    }
+
+    final createdAt = _order.createdAt ?? DateTime.now();
+    final targetTime = createdAt.add(const Duration(minutes: 15));
+    final diff = targetTime.difference(DateTime.now()).inSeconds;
+    _secondsRemaining = diff > 0 ? diff : 180; // at least 3 mins left if running late
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  String _formattedCountdown() {
+    if (_secondsRemaining <= 0) return "Arriving Now!";
+    final mins = _secondsRemaining ~/ 60;
+    final secs = _secondsRemaining % 60;
+    return "${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')} min";
   }
 
   void _startPolling() {
@@ -247,13 +569,20 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   Future<void> _refreshOrderDetails({bool silent = false}) async {
     if (!silent) setState(() => _isRefreshing = true);
     final orderProv = context.read<OrderProvider>();
-    final updated = await orderProv.fetchOrderDetails(_order.id);
+    final targetId = _order.id.isNotEmpty ? _order.id : _order.orderId;
+    final updated = await orderProv.fetchOrderDetails(targetId);
     if (mounted) {
       if (updated != null) {
         setState(() {
           _order = updated;
           if (!silent) _isRefreshing = false;
         });
+        if (_order.status == 'DELIVERED' || _order.status == 'CANCELLED') {
+          _countdownTimer?.cancel();
+          setState(() {
+            _secondsRemaining = 0;
+          });
+        }
       } else {
         if (!silent) setState(() => _isRefreshing = false);
       }
@@ -263,6 +592,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _countdownTimer?.cancel();
     _pulseController.dispose();
     _bikeMovementController.dispose();
     _radarScanController.dispose();
@@ -276,6 +606,21 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     final Uri url = Uri.parse('tel:$phone');
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
+    }
+  }
+
+  Future<void> _launchSms(String phone, String message) async {
+    final uri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: {'body': message},
+    );
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint("Error launching SMS: $e");
     }
   }
 
@@ -702,17 +1047,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            CustomText(
               "Live Order Tracking",
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
             ),
-            Text(
+            CustomText(
               "ID: ${_order.orderId}",
-              style: TextStyle(
-                color: isDark ? Colors.white60 : Colors.black54,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
+              color: isDark ? Colors.white60 : Colors.black54,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
             ),
           ],
         ),
@@ -748,7 +1093,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Hero Simulated Interactive Vector Map Section
+              // 1. Hero Simulated Interactive Vector Map Section
               _buildInteractiveMapHero(
                 isCancelled: isCancelled,
                 isDelivered: isDelivered,
@@ -757,45 +1102,72 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 isDark: isDark,
               ),
 
-              // Status Headline Hero Card
+              // 2. Live Countdown Delivery ETA Card (Zepto / Blinkit style)
+              _buildLiveCountdownCard(
+                isDark,
+                isDelivered,
+                isCancelled,
+                currentStep,
+              ),
+
+              // 3. Status Headline Hero Card
               _buildStatusHeadlineCard(
                 currentStep: currentStep,
                 estimatedTime: estimatedTime,
                 isDark: isDark,
               ),
 
-              // Delivery Partner / Assigning Rider Section
+              // 4. Delivery Handover PIN / OTP Card
+              if (!isDelivered && !isCancelled)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: _buildDeliveryPinCard(isDark),
+                ),
+
+              // 5. Delivery Partner / Assigning Rider Section with Call & Chat
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 6,
                 ),
                 child: _buildRiderSection(isDark),
               ),
 
-              // Step-by-step Detailed Journey Timeline
+              // 6. Delivery Instructions & Landmark Card (Option B integration)
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 6,
+                ),
+                child: _buildDeliveryInstructionsCard(isDark),
+              ),
+
+              // 7. Step-by-step Detailed Journey Timeline
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
                 ),
                 child: _buildAdvancedTimeline(currentStep, isCancelled, isDark),
               ),
 
-              // Delivery Address Card
+              // 8. Delivery Address Card
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 6,
                 ),
                 child: _buildAddressCard(isDark),
               ),
 
-              // Order Items & Bill Breakdown Card
+              // 9. Order Items & Bill Breakdown Card
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 6,
                 ),
                 child: _buildItemsAndBillCard(isDark),
               ),
@@ -973,38 +1345,53 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
           // 1. Map Layer: Real Interactive Google Map with Polyline or 3D Vector Graphic
           if (_useGoogleMap)
             Positioned.fill(
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: LatLng(
-                    (_storeLatLng.latitude + _destLatLng.latitude) / 2,
-                    (_storeLatLng.longitude + _destLatLng.longitude) / 2,
-                  ),
-                  zoom: 14.5,
-                ),
-                markers: _getMarkers(
-                  isDelivered,
-                  isCancelled,
-                  currentStep,
-                  bikeProgress,
-                ),
-                polylines: _getPolylines(isDelivered, currentStep),
-                myLocationEnabled: false,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-                compassEnabled: false,
-                rotateGesturesEnabled: true,
-                scrollGesturesEnabled: true,
-                zoomGesturesEnabled: true,
-                gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                  Factory<OneSequenceGestureRecognizer>(
-                    () => EagerGestureRecognizer(),
-                  ),
-                },
-                style: isDark ? _darkMapStyle : null,
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  _fitMapBounds();
+              child: AnimatedBuilder(
+                animation: _bikeMovementAnimation,
+                builder: (context, _) {
+                  final progress = isDelivered
+                      ? 1.0
+                      : (currentStep == 3
+                            ? 0.55 + (0.35 * _bikeMovementAnimation.value)
+                            : currentStep == 2
+                            ? 0.30 + (0.18 * _bikeMovementAnimation.value)
+                            : currentStep == 1
+                            ? 0.12 + (0.08 * _bikeMovementAnimation.value)
+                            : 0.05);
+
+                  return GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(
+                        (_storeLatLng.latitude + _destLatLng.latitude) / 2,
+                        (_storeLatLng.longitude + _destLatLng.longitude) / 2,
+                      ),
+                      zoom: 14.2,
+                    ),
+                    markers: _getMarkers(
+                      isDelivered,
+                      isCancelled,
+                      currentStep,
+                      progress,
+                    ),
+                    polylines: _getPolylines(isDelivered, progress),
+                    myLocationEnabled: false,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: false,
+                    compassEnabled: false,
+                    rotateGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    zoomGesturesEnabled: true,
+                    gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                      Factory<OneSequenceGestureRecognizer>(
+                        () => EagerGestureRecognizer(),
+                      ),
+                    },
+                    style: isDark ? _darkMapStyle : null,
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      _fitMapBounds();
+                    },
+                  );
                 },
               ),
             )
@@ -1264,6 +1651,140 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     );
   }
 
+  // 1B. LIVE 10-15 MIN COUNTDOWN CARD (Zepto/Blinkit Live Countdown Timer)
+  Widget _buildLiveCountdownCard(
+    bool isDark,
+    bool isDelivered,
+    bool isCancelled,
+    int currentStep,
+  ) {
+    if (isDelivered || isCancelled) return const SizedBox.shrink();
+
+    final countdownStr = _formattedCountdown();
+    final double fraction = (_secondsRemaining / (15 * 60)).clamp(0.0, 1.0);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+              : [Colors.white, const Color(0xFFF8FAFC)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Circular Countdown Progress Ring
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: CircularProgressIndicator(
+                  value: fraction,
+                  strokeWidth: 4.5,
+                  backgroundColor: isDark
+                      ? Colors.white12
+                      : const Color(0xFFE2E8F0),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _secondsRemaining < 180
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFF10B981),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.bolt_rounded,
+                color: _secondsRemaining < 180
+                    ? const Color(0xFFF59E0B)
+                    : const Color(0xFF10B981),
+                size: 26,
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF10B981),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF10B981),
+                            blurRadius: 6,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const CustomText(
+                      "LIVE 10-15 MINS DELIVERY",
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                      color: Color(0xFF10B981),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    CustomText(
+                      countdownStr,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                    const SizedBox(width: 6),
+                    const CustomText(
+                      "remaining",
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                CustomText(
+                  currentStep >= 3
+                      ? "Rider is speeding to your address 🛵"
+                      : "Fresh items are being hand-picked at store 🛒",
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // 2. STATUS HEADLINE CARD WITH STEP PROGRESS BAR
   Widget _buildStatusHeadlineCard({
     required int currentStep,
@@ -1449,8 +1970,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                         color: Color(0xFFF59E0B),
                       ),
                       const SizedBox(width: 2),
-                      const CustomText(
-                        "4.9",
+                      CustomText(
+                        (rider['rating'] != null)
+                            ? (rider['rating'] as num).toDouble().toStringAsFixed(1)
+                            : "4.9",
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1476,17 +1999,37 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 ],
               ),
             ),
-            // Call Button
-            if (riderPhone.isNotEmpty)
-              IconButton.filled(
-                onPressed: () => _callPhone(riderPhone),
-                style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(12),
+            // Action Buttons: Quick Message & Phone Call
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Quick Message / Chat Button
+                IconButton.filled(
+                  tooltip: "Message Rider",
+                  onPressed: () => _showRiderChatModal(riderName, riderPhone),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+                    foregroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.all(10),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
                 ),
-                icon: const Icon(Icons.call, size: 20),
-              ),
+                if (riderPhone.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  // Call Button
+                  IconButton.filled(
+                    tooltip: "Call Rider",
+                    onPressed: () => _callPhone(riderPhone),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.all(10),
+                    ),
+                    icon: const Icon(Icons.call_rounded, size: 20),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       );
@@ -1554,6 +2097,459 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     }
   }
 
+  // QUICK MESSAGE MODAL FOR RIDER
+  void _showRiderChatModal(String riderName, String riderPhone) {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final controller = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                    child: Icon(
+                      Icons.two_wheeler_rounded,
+                      color: AppTheme.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        "Quick Message to Rider",
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                      CustomText(
+                        riderName,
+                        fontSize: 12,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const CustomText(
+                "TAP A QUICK MESSAGE",
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.6,
+                color: Color(0xFF94A3B8),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  "🚪 Leave at doorstep",
+                  "🔕 Please don't ring bell",
+                  "🛡️ Leave with security guard",
+                  "📞 Call when you reach gate",
+                  "🏢 Lift is on the right",
+                ].map((msg) {
+                  return GestureDetector(
+                    onTap: () {
+                      controller.text = msg;
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white10
+                              : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: CustomText(
+                        msg,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+                decoration: InputDecoration(
+                  hintText: "Type custom message for rider...",
+                  hintStyle: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  filled: true,
+                  fillColor: isDark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final text = controller.text.trim();
+                    if (text.isEmpty) return;
+                    Navigator.pop(ctx);
+                    HapticFeedback.mediumImpact();
+                    if (riderPhone.isNotEmpty) {
+                      _launchSms(riderPhone, text);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: CustomText(
+                            "Message sent to $riderName: '$text'",
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: const Color(0xFF10B981),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const CustomText(
+                    "Send to Rider",
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 3A. SAFE HANDOVER PIN / DELIVERY OTP CARD
+  Widget _buildDeliveryPinCard(bool isDark) {
+    final pin = _order.deliveryPin;
+    final digits = pin.padLeft(4, '0').split('');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppTheme.primary.withValues(alpha: 0.25),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.verified_user_rounded,
+                      size: 16,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  CustomText(
+                    "Delivery Handover PIN",
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const CustomText(
+                  "OTP FOR RIDER",
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                  color: Color(0xFF10B981),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ...digits.map((digit) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  width: 46,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.35),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.3 : 0.05,
+                        ),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: CustomText(
+                    digit,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                );
+              }),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: "Copy PIN",
+                icon: Icon(
+                  Icons.copy_rounded,
+                  size: 20,
+                  color: AppTheme.primary,
+                ),
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  Clipboard.setData(ClipboardData(text: pin));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: CustomText(
+                        "Delivery PIN $pin copied to clipboard!",
+                      ),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: const Color(0xFF0F172A),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Center(
+            child: CustomText(
+              "Share this 4-digit code with your delivery partner upon package arrival.",
+              textAlign: TextAlign.center,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF64748B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 3B. CUSTOMER DELIVERY INSTRUCTIONS & LANDMARK NOTE CARD
+  Widget _buildDeliveryInstructionsCard(bool isDark) {
+    final instructions = _order.deliveryInstructions;
+    final note = _order.deliveryNote;
+
+    if (instructions.isEmpty && (note == null || note.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.notifications_active_outlined,
+                  size: 16,
+                  color: Color(0xFFF59E0B),
+                ),
+              ),
+              const SizedBox(width: 8),
+              CustomText(
+                "Rider Instructions",
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (instructions.isNotEmpty) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: instructions
+                  .where((i) => !i.startsWith('Note: '))
+                  .map((instr) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: CustomText(
+                        instr,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primary,
+                      ),
+                    );
+                  })
+                  .toList(),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (note != null && note.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.navigation_rounded,
+                    size: 14,
+                    color: Color(0xFF64748B),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: CustomText(
+                      'Landmark note: "$note"',
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : const Color(0xFF334155),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // 4. STEP-BY-STEP DETAILED JOURNEY TIMELINE
   Widget _buildAdvancedTimeline(
     int currentStep,
@@ -1612,13 +2608,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 color: Color(0xFF10B981),
               ),
               const SizedBox(width: 8),
-              Text(
+              CustomText(
                 "Order Journey",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                ),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
               ),
             ],
           ),
@@ -1727,39 +2721,33 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                         children: [
                           Row(
                             children: [
-                              Text(
+                              CustomText(
                                 stage['title'] as String,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isCompleted
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
-                                  color: isCompleted
-                                      ? (isDark ? Colors.white : Colors.black87)
-                                      : (isDark ? Colors.white38 : Colors.grey),
-                                ),
+                                fontSize: 14,
+                                fontWeight: isCompleted
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: isCompleted
+                                    ? (isDark ? Colors.white : Colors.black87)
+                                    : (isDark ? Colors.white38 : Colors.grey),
                               ),
                               const Spacer(),
                               if (timeText != null)
-                                Text(
+                                CustomText(
                                   timeText,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: isCompleted
-                                        ? const Color(0xFF10B981)
-                                        : Colors.grey,
-                                  ),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isCompleted
+                                      ? const Color(0xFF10B981)
+                                      : Colors.grey,
                                 ),
                             ],
                           ),
                           const SizedBox(height: 2),
-                          Text(
+                          CustomText(
                             stage['subtitle'] as String,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.white60 : Colors.black54,
-                            ),
+                            fontSize: 12,
+                            color: isDark ? Colors.white60 : Colors.black54,
                           ),
                         ],
                       ),
@@ -1815,15 +2803,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   children: [
                     Row(
                       children: [
-                        Text(
+                        CustomText(
                           addr.tag.toUpperCase(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 13,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF0F172A),
-                          ),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -1835,27 +2821,23 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                             color: Colors.blue.shade50,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
+                          child: CustomText(
                             "Delivery Destination",
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade800,
-                            ),
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade800,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    CustomText(
                       addr.receiverName.isNotEmpty
                           ? "${addr.receiverName} • ${addr.receiverPhone}"
                           : _order.customerName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
-                      ),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
                     ),
                   ],
                 ),
@@ -1863,15 +2845,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
             ],
           ),
           const SizedBox(height: 10),
-          Text(
+          CustomText(
             addr.completeAddress.isNotEmpty
                 ? addr.completeAddress
                 : "Deliver to door",
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white60 : Colors.black54,
-              height: 1.3,
-            ),
+            fontSize: 13,
+            color: isDark ? Colors.white60 : Colors.black54,
+            height: 1.3,
           ),
         ],
       ),
@@ -1936,7 +2916,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _order.items.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 64),
+              separatorBuilder: (_, index) => const Divider(height: 1, indent: 64),
               itemBuilder: (context, index) {
                 final item = _order.items[index];
                 return Padding(

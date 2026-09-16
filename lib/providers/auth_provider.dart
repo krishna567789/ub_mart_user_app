@@ -119,42 +119,54 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> addAddress(AddressModel newAddress) async {
     if (_user == null) return;
+    final updatedAddresses = List<AddressModel>.from(_user!.addresses)..add(newAddress);
+    await _updateAddresses(updatedAddresses);
+  }
+
+  Future<void> deleteAddress(int index) async {
+    if (_user == null || index < 0 || index >= _user!.addresses.length) return;
+    final updatedAddresses = List<AddressModel>.from(_user!.addresses)..removeAt(index);
+    await _updateAddresses(updatedAddresses);
+  }
+
+  Future<void> setDefaultAddress(int index) async {
+    if (_user == null || index <= 0 || index >= _user!.addresses.length) return;
+    final updatedAddresses = List<AddressModel>.from(_user!.addresses);
+    final selected = updatedAddresses.removeAt(index);
+    updatedAddresses.insert(0, selected);
+    await _updateAddresses(updatedAddresses);
+  }
+
+  Future<void> updateAddress(int index, AddressModel updatedAddress) async {
+    if (_user == null || index < 0 || index >= _user!.addresses.length) return;
+    final updatedAddresses = List<AddressModel>.from(_user!.addresses);
+    updatedAddresses[index] = updatedAddress;
+    await _updateAddresses(updatedAddresses);
+  }
+
+  Future<void> _updateAddresses(List<AddressModel> updatedAddresses) async {
+    if (_user == null) return;
+
+    _user = UserModel(
+      id: _user!.id,
+      storeId: _user!.storeId,
+      name: _user!.name,
+      phone: _user!.phone,
+      email: _user!.email,
+      walletBalance: _user!.walletBalance,
+      addresses: updatedAddresses,
+    );
+    await StorageService.saveUser(_user!);
+    notifyListeners();
 
     try {
-      // Persist to backend
       await apiService.put(
         '/users/${_user!.id}',
-        body: {'newAddress': newAddress.toJson()},
+        body: {'addresses': updatedAddresses.map((a) => a.toJson()).toList()},
         storeId: _user!.storeId,
       );
-
-      final updatedAddresses = List<AddressModel>.from(_user!.addresses)..add(newAddress);
-      _user = UserModel(
-        id: _user!.id,
-        storeId: _user!.storeId,
-        name: _user!.name,
-        phone: _user!.phone,
-        email: _user!.email,
-        walletBalance: _user!.walletBalance,
-        addresses: updatedAddresses,
-      );
-
-      await StorageService.saveUser(_user!);
-      notifyListeners();
     } catch (e) {
-      // Fallback local update
-      final updatedAddresses = List<AddressModel>.from(_user!.addresses)..add(newAddress);
-      _user = UserModel(
-        id: _user!.id,
-        storeId: _user!.storeId,
-        name: _user!.name,
-        phone: _user!.phone,
-        email: _user!.email,
-        walletBalance: _user!.walletBalance,
-        addresses: updatedAddresses,
-      );
-      await StorageService.saveUser(_user!);
-      notifyListeners();
+      debugPrint('Failed to sync addresses with backend: $e');
     }
   }
 

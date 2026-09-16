@@ -149,6 +149,70 @@ class ProductProvider with ChangeNotifier {
     }).toList();
   }
 
+  /// High-performance API-backed search with multi-keyword matching,
+  /// sorting, brand filtering, and stock availability filter
+  Future<List<ProductModel>> searchProductsApi(
+    String storeId,
+    String query, {
+    String? categoryId,
+    String? brand,
+    String? sortBy,
+    bool inStockOnly = false,
+  }) async {
+    try {
+      final Map<String, String> queryParams = {};
+      if (query.trim().isNotEmpty) {
+        queryParams['search'] = query.trim();
+      }
+      if (categoryId != null && categoryId.isNotEmpty) {
+        queryParams['category'] = categoryId;
+      }
+      if (brand != null && brand.isNotEmpty) {
+        queryParams['brand'] = brand;
+      }
+      if (sortBy != null && sortBy.isNotEmpty) {
+        queryParams['sortBy'] = sortBy;
+      }
+      if (inStockOnly) {
+        queryParams['inStock'] = 'true';
+      }
+
+      final res = await _apiService.get(
+        '/products',
+        storeId: storeId,
+        queryParams: queryParams,
+      );
+
+      if (res is List) {
+        return res
+            .map((p) => ProductModel.fromJson(
+                p is Map ? Map<String, dynamic>.from(p) : <String, dynamic>{}))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error in searchProductsApi: $e');
+    }
+    return [];
+  }
+
+  Future<ProductModel?> fetchProductById(String productId) async {
+    // Check in-memory cache first
+    try {
+      final cached = _products.firstWhere((p) => p.id == productId);
+      return cached;
+    } catch (_) {}
+
+    try {
+      final res = await _apiService.get('/products/$productId');
+      if (res != null && res is Map<String, dynamic>) {
+        return ProductModel.fromJson(res);
+      }
+    } catch (e) {
+      debugPrint('Error fetching product by ID: $e');
+    }
+    return null;
+  }
+
   Future<List<ProductModel>> fetchSimilarProducts(String productId) async {
     try {
       final res = await _apiService.get('/products/$productId/similar');

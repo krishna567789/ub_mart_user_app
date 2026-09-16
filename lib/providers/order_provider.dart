@@ -321,7 +321,12 @@ class OrderProvider with ChangeNotifier {
         'itemTotal': cart.itemTotal,
         'deliveryFee': cart.deliveryFee,
         'deliveryTip': cart.deliveryTip,
-        'deliveryInstructions': cart.deliveryInstructions.toList(),
+        'deliveryInstructions': [
+          ...cart.deliveryInstructions,
+          if (cart.deliveryNote.trim().isNotEmpty) "Note: ${cart.deliveryNote.trim()}",
+        ],
+        'deliveryNote': cart.deliveryNote.trim(),
+        'otp': (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString(),
         'taxAmount': 0.0,
         'discountAmount': cart.discountAmount,
         'couponCode': cart.couponCode,

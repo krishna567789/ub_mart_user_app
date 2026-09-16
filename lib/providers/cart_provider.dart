@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
 import '../models/coupon_model.dart';
@@ -72,6 +73,13 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  String _deliveryNote = '';
+  String get deliveryNote => _deliveryNote;
+  void setDeliveryNote(String note) {
+    _deliveryNote = note;
+    notifyListeners();
+  }
+
   double get grandTotal {
     final total = itemTotal + deliveryFee + deliveryTip - discountAmount;
     return total < 0 ? 0.0 : total;
@@ -136,6 +144,7 @@ class CartProvider with ChangeNotifier {
     _validatedDiscount = 0.0;
     _deliveryTip = 0.0;
     _deliveryInstructions.clear();
+    _deliveryNote = '';
     notifyListeners();
     syncCartOnline();
   }
@@ -265,23 +274,65 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  Future<void> syncCartOnline() async {
-    if (_userId == null) {
-      final user = await StorageService.getUser();
-      if (user != null) _userId = user.id;
-    }
-    if (_userId == null) return;
+  Timer? _syncDebounceTimer;
 
-    final cartList = _items.values.map((item) => {
+  void syncCartOnline({bool immediate = false}) {
+    _syncDebounceTimer?.cancel();
+    if (immediate) {
+      _executeCartSync();
+    } else {
+      _syncDebounceTimer = Timer(const Duration(milliseconds: 900), () {
+        _executeCartSync();
+      });
+    }
+  }
+
+  Future<void> _executeCartSync() async {
+    final user = await StorageService.getUser();
+    if (user == null) return;
+    _userId = user.id;
+
+    final richItemsList = _items.values.map((item) => {
+      'productId': item.product.id,
+      'name': item.product.name,
+      'variantSize': item.selectedVariant.size,
+      'quantity': item.quantity,
+      'price': item.selectedVariant.price,
+      'imageUrl': item.product.images.isNotEmpty ? item.product.images.first : '',
+    }).toList();
+
+    // Legacy simple cart list for backward compatibility
+    final legacyCartList = _items.values.map((item) => {
       'productId': item.product.id,
       'variantSize': item.selectedVariant.size,
       'quantity': item.quantity,
     }).toList();
 
     try {
-      await apiService.put('/users/$_userId/cart', body: { 'cart': cartList });
+      // 1. Sync to abandoned cart tracker
+      await apiService.post(
+        '/cart/sync',
+        body: {
+          'userId': user.id,
+          'userName': user.name,
+          'userPhone': user.phone,
+          'storeId': user.storeId,
+          'items': richItemsList,
+          'itemTotal': itemTotal,
+          'status': _items.isEmpty ? 'CONVERTED' : 'ACTIVE',
+        },
+      );
+
+      // 2. Sync to user model legacy cart
+      await apiService.put('/users/$_userId/cart', body: { 'cart': legacyCartList });
     } catch (e) {
-      debugPrint('Error syncing cart: $e');
+      debugPrint('Error syncing cart online: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    _syncDebounceTimer?.cancel();
+    super.dispose();
   }
 }

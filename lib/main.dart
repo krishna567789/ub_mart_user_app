@@ -12,12 +12,17 @@ import 'screens/main_navigation_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/seasonal_overlay.dart';
 import 'services/api_service.dart';
+import 'services/deep_link_service.dart';
 
 import 'config/api_config.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   apiService.setStoreId(ApiConfig.defaultStoreId);
+
+  // Initialize Deep Linking engine
+  await DeepLinkService().init();
+
   runApp(
     MultiProvider(
       providers: [
@@ -48,6 +53,7 @@ class MyApp extends StatelessWidget {
 
         return MaterialApp(
           title: 'UB Mart',
+          navigatorKey: DeepLinkService.navigatorKey,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.buildDynamicTheme(
             primaryColor: settingsProvider.getPrimaryColor(),

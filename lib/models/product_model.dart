@@ -167,4 +167,81 @@ class ProductModel {
   // Get active default variant or first variant
   ProductVariantModel get defaultVariant =>
       variants.isNotEmpty ? variants.first : ProductVariantModel(size: 'Default', price: 0, stock: 0);
+
+  /// Automatically resolves whether the product is Veg, Non-Veg, Egg, or Non-Food.
+  FoodType get foodType {
+    final lowerName = name.toLowerCase();
+    final lowerSub = (subCategoryName ?? '').toLowerCase();
+    final lowerDesc = (description ?? '').toLowerCase();
+    final tagsStr = tags.join(" ").toLowerCase();
+    final allText = '$lowerName $lowerSub $lowerDesc $tagsStr';
+
+    // 1. Non-food detection (cleaning, personal care, electronics, pooja items, etc.)
+    if (allText.contains('detergent') ||
+        allText.contains('cleaner') ||
+        allText.contains('shampoo') ||
+        allText.contains('soap') ||
+        allText.contains('harpic') ||
+        allText.contains('vim') ||
+        allText.contains('colgate') ||
+        allText.contains('toothpaste') ||
+        allText.contains('toothbrush') ||
+        allText.contains('battery') ||
+        allText.contains('diaper') ||
+        allText.contains('sanitary') ||
+        allText.contains('perfume') ||
+        allText.contains('deodorant') ||
+        allText.contains('lotion') ||
+        (allText.contains('cream') &&
+            !allText.contains('ice cream') &&
+            !allText.contains('milk cream') &&
+            !allText.contains('malai')) ||
+        allText.contains('face wash') ||
+        allText.contains('scrub') ||
+        allText.contains('tissue') ||
+        allText.contains('wipe') ||
+        allText.contains('broom') ||
+        allText.contains('mop') ||
+        allText.contains('foil') ||
+        allText.contains('scrubber') ||
+        allText.contains('pooja') ||
+        allText.contains('agarbatti') ||
+        allText.contains('dhoop') ||
+        allText.contains('bulb') ||
+        allText.contains('utensil') ||
+        allText.contains('bottle') ||
+        allText.contains('plastic')) {
+      return FoodType.none;
+    }
+
+    // 2. Non-Veg detection
+    if (allText.contains('non-veg') ||
+        allText.contains('nonveg') ||
+        allText.contains('chicken') ||
+        allText.contains('mutton') ||
+        allText.contains('meat') ||
+        allText.contains('fish') ||
+        allText.contains('prawn') ||
+        allText.contains('seafood') ||
+        allText.contains('pork') ||
+        allText.contains('beef')) {
+      return FoodType.nonVeg;
+    }
+
+    // 3. Egg detection
+    if (allText.contains('egg') && !allText.contains('eggless')) {
+      return FoodType.egg;
+    }
+
+    // 4. Defaults to Vegetarian for grocery & kitchen items
+    return FoodType.veg;
+  }
 }
+
+enum FoodType {
+  veg,
+  nonVeg,
+  egg,
+  none,
+}
+

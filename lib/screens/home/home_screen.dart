@@ -19,7 +19,7 @@ import 'widgets/animated_voice_search.dart';
 import 'widgets/delivery_bike_loader.dart';
 import '../location_select_screen.dart';
 import '../profile_screen.dart';
-import '../product_list_screen.dart';
+import '../search/product_search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -545,11 +545,11 @@ class _HomeScreenState extends State<HomeScreen>
               // Search Bar
               GestureDetector(
                 onTap: () {
+                  HapticFeedback.lightImpact();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const ProductListScreen(title: "All Products"),
+                      builder: (_) => const ProductSearchScreen(),
                     ),
                   );
                 },

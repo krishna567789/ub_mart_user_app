@@ -47,6 +47,7 @@ dependencies:
   url_launcher: ^6.3.2
   pinput: ^6.0.2
   smart_auth: ^3.2.0
+  app_links: ^7.0.0
 
 dev_dependencies:
   flutter_test:

@@ -74,9 +74,21 @@ class OrderModel {
   final String paymentStatus; // PENDING, PAID, FAILED
   final Map<String, dynamic>? assignedRider;
   final List<String> deliveryInstructions;
+  final String? deliveryNote;
+  final String? otp;
   final double? rating;
   final String? review;
   final DateTime? createdAt;
+
+  String get deliveryPin {
+    if (otp != null && otp!.isNotEmpty) return otp!;
+    final clean = orderId.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.length >= 4) {
+      return clean.substring(clean.length - 4);
+    }
+    final hash = (id.hashCode.abs() % 9000) + 1000;
+    return hash.toString();
+  }
 
   OrderModel({
     required this.id,
@@ -98,6 +110,8 @@ class OrderModel {
     required this.paymentStatus,
     this.assignedRider,
     this.deliveryInstructions = const [],
+    this.deliveryNote,
+    this.otp,
     this.rating,
     this.review,
     this.createdAt,
@@ -125,6 +139,18 @@ class OrderModel {
             .toList() ??
         [];
 
+    String? note = json['deliveryNote'] as String?;
+    if (note == null || note.isEmpty) {
+      for (final instr in instructions) {
+        if (instr.startsWith('Note: ')) {
+          note = instr.substring(6).trim();
+          break;
+        }
+      }
+    }
+
+    final otpVal = json['otp']?.toString() ?? json['deliveryOtp']?.toString();
+
     final ratingVal = json['rating'] != null ? (json['rating'] as num).toDouble() : null;
 
     return OrderModel(
@@ -149,6 +175,8 @@ class OrderModel {
           ? Map<String, dynamic>.from(json['assignedRider'])
           : null,
       deliveryInstructions: instructions,
+      deliveryNote: note,
+      otp: otpVal,
       rating: ratingVal,
       review: json['review'] as String?,
       createdAt: json['createdAt'] != null
@@ -176,7 +204,10 @@ class OrderModel {
       'status': status,
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentStatus,
+      'assignedRider': assignedRider,
       'deliveryInstructions': deliveryInstructions,
+      'deliveryNote': deliveryNote,
+      'otp': otp,
       'rating': rating,
       'review': review,
       'createdAt': createdAt?.toIso8601String(),

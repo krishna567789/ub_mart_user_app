@@ -1,126 +1,294 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/custom_text.dart';
 import 'main_navigation_screen.dart';
 import 'order_tracking_screen.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   final OrderModel order;
 
-  const OrderSuccessScreen({Key? key, required this.order}) : super(key: key);
+  const OrderSuccessScreen({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  color: AppTheme.primary,
-                  size: 70,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                "Order Placed Successfully!",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Order ID: ${order.orderId}",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Your order has been received and is being prepared by the store. Delivery in 10-15 minutes!",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 30),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = AppTheme.primary;
 
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.background,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF090D16) : Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Success Badge with Concentric Rings
+                Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Total Amount:"),
-                        Text(
-                          "₹${order.totalAmount.toStringAsFixed(0)}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Payment Method:"),
-                        Text(
-                          order.paymentMethod,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                      ),
+                    ),
+                    Container(
+                      width: 74,
+                      height: 74,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF10B981),
+                            blurRadius: 18,
+                            spreadRadius: 2,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 44,
+                      ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 24),
 
-              const SizedBox(height: 40),
+                CustomText(
+                  "Order Placed Successfully!",
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+                const SizedBox(height: 8),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => OrderTrackingScreen(order: order),
+                // Order ID Tag
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Clipboard.setData(ClipboardData(text: order.orderId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: CustomText("Order ID copied!"),
+                        duration: Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
                       ),
                     );
                   },
-                  child: const Text("TRACK ORDER"),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const MainNavigationScreen(initialIndex: 0), // Home
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: primaryColor.withValues(alpha: 0.25),
+                      ),
                     ),
-                    (route) => false,
-                  );
-                },
-                child: const Text("Continue Shopping"),
-              ),
-            ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CustomText(
+                          "Order ID: #${order.orderId}",
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(Icons.copy_rounded, size: 14, color: primaryColor),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Delivery ETA Guarantee Pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.bolt_rounded,
+                        size: 18,
+                        color: Color(0xFF10B981),
+                      ),
+                      const SizedBox(width: 6),
+                      CustomText(
+                        "Delivery in 10–15 mins guaranteed",
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Order Summary Card
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          CustomText(
+                            "Total Amount",
+                            fontSize: 13,
+                            color: const Color(0xFF64748B),
+                          ),
+                          CustomText(
+                            "₹${order.totalAmount.toStringAsFixed(0)}",
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          CustomText(
+                            "Payment Method",
+                            fontSize: 13,
+                            color: const Color(0xFF64748B),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: CustomText(
+                              order.paymentMethod,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          CustomText(
+                            "Delivery Handover PIN",
+                            fontSize: 13,
+                            color: const Color(0xFF64748B),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: CustomText(
+                              order.deliveryPin,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              color: const Color(0xFF10B981),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Primary Action: Track Order
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OrderTrackingScreen(order: order),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.delivery_dining_rounded, size: 22),
+                    label: const CustomText(
+                      "TRACK ORDER LIVE",
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Secondary Action: Continue Shopping
+                TextButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MainNavigationScreen(initialIndex: 0),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                  child: CustomText(
+                    "Continue Shopping",
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

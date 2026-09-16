@@ -9,6 +9,7 @@ import '../widgets/cart_bottom_bar.dart';
 import '../widgets/shimmer_loaders.dart';
 import '../utils/app_sizes.dart';
 import 'cart_screen.dart';
+import 'search/product_search_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   final String title;
@@ -30,7 +31,6 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isSearching = false;
   String? _selectedSubCategoryId;
 
   @override
@@ -39,7 +39,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
     _selectedSubCategoryId = widget.subCategoryId;
     if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
       _searchController.text = widget.initialSearch!;
-      _isSearching = true;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
@@ -125,40 +124,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontSize: 14,
-                ),
-                decoration: const InputDecoration(
-                  hintText: "Search products, brands...",
-                  border: InputBorder.none,
-                ),
-                onChanged: (val) =>
-                    _fetchProductsForCurrentSelection(query: val),
-              )
-            : CustomText(
-                widget.title,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
+        title: CustomText(
+          widget.title,
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+        ),
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search_rounded),
+            icon: const Icon(Icons.search_rounded),
             onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _searchController.clear();
-                  _isSearching = false;
-                  _fetchProductsForCurrentSelection(query: '');
-                } else {
-                  _isSearching = true;
-                }
-              });
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProductSearchScreen(),
+                ),
+              );
             },
           ),
         ],

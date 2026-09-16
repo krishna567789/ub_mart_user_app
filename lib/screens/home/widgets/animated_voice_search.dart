@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../theme/app_theme.dart';
+import '../../../widgets/voice_search_modal.dart';
+import '../../search/product_search_screen.dart';
 
 class AnimatedVoiceSearch extends StatefulWidget {
   const AnimatedVoiceSearch({super.key});
@@ -32,23 +34,42 @@ class _AnimatedVoiceSearchState extends State<AnimatedVoiceSearch>
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.primary.withOpacity(0.1 + (_controller.value * 0.1)),
-          ),
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: Icon(Icons.mic, color: AppTheme.primary, size: 20),
+  void _openVoiceModal() {
+    VoiceSearchModal.show(
+      context,
+      onQuerySelected: (query) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductSearchScreen(initialQuery: query),
           ),
         );
       },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _openVoiceModal,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.primary.withValues(
+                alpha: 0.1 + (_controller.value * 0.1),
+              ),
+            ),
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Icon(Icons.mic_rounded, color: AppTheme.primary, size: 20),
+            ),
+          );
+        },
+      ),
     );
   }
 }
