@@ -19,8 +19,9 @@ class AppTheme {
     required Color accentColor,
     required Color backgroundColor,
     required Color textPrimaryColor,
+    bool isDark = false,
   }) {
-    final isLight = backgroundColor.computeLuminance() > 0.5;
+    final isLight = !isDark;
     final baseBrightness = isLight ? Brightness.light : Brightness.dark;
     final baseTextTheme = isLight ? ThemeData.light().textTheme : ThemeData.dark().textTheme;
 

@@ -105,6 +105,10 @@ class _SeasonalOverlayState extends State<SeasonalOverlay>
         return 'SPARKLE';
       case 'SUMMER':
         return 'SUNSHINE';
+      case 'HALLOWEEN':
+        return 'BAT';
+      case 'VALENTINES':
+        return 'HEART';
       default:
         return 'SNOW';
     }
@@ -227,6 +231,28 @@ class _SeasonalPainter extends CustomPainter {
           // Warm glowing sunbeam shimmer
           paint.color = Colors.yellow.withValues(alpha: 0.4);
           canvas.drawCircle(Offset(px, py), particle.size * 1.5, paint);
+          break;
+        case 'BAT':
+          paint.color = Colors.orangeAccent.withValues(alpha: 0.7);
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(px, py),
+              width: particle.size * 2,
+              height: particle.size,
+            ),
+            paint,
+          );
+          break;
+        case 'HEART':
+          paint.color = Colors.pinkAccent.withValues(alpha: 0.7);
+          canvas.drawCircle(Offset(px - particle.size * 0.5, py), particle.size, paint);
+          canvas.drawCircle(Offset(px + particle.size * 0.5, py), particle.size, paint);
+          final path = Path()
+            ..moveTo(px - particle.size * 1.5, py)
+            ..lineTo(px, py + particle.size * 1.5)
+            ..lineTo(px + particle.size * 1.5, py)
+            ..close();
+          canvas.drawPath(path, paint);
           break;
       }
     }

@@ -55,11 +55,20 @@ class MyApp extends StatelessWidget {
           title: 'UB Mart',
           navigatorKey: DeepLinkService.navigatorKey,
           debugShowCheckedModeBanner: false,
+          themeMode: settingsProvider.getThemeMode(),
           theme: AppTheme.buildDynamicTheme(
             primaryColor: settingsProvider.getPrimaryColor(),
             accentColor: settingsProvider.getAccentColor(),
             backgroundColor: settingsProvider.getBackgroundColor(),
             textPrimaryColor: settingsProvider.getTextPrimaryColor(),
+            isDark: false,
+          ),
+          darkTheme: AppTheme.buildDynamicTheme(
+            primaryColor: settingsProvider.getPrimaryColor(),
+            accentColor: settingsProvider.getAccentColor(),
+            backgroundColor: const Color(0xFF111418), // Dark mode surface
+            textPrimaryColor: const Color(0xFFF0F3F6), // Dark mode text
+            isDark: true,
           ),
           home: showInApp 
             ? SeasonalOverlay(

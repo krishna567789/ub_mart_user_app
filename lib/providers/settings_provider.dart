@@ -60,4 +60,14 @@ class SettingsProvider with ChangeNotifier {
       return const Color(0xFF0C831F); // Fallback to green
     }
   }
+
+  ThemeMode getThemeMode() {
+    if (_settings == null || _settings!.displayMode == 'AUTO') {
+      return ThemeMode.system;
+    }
+    if (_settings!.displayMode == 'DARK') {
+      return ThemeMode.dark;
+    }
+    return ThemeMode.light;
+  }
 }

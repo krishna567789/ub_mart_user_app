@@ -48,6 +48,7 @@ class AppSettings {
   final int baseDeliveryFee;
   
   // Dynamic UI Colors from Admin
+  final String displayMode;
   final String primaryColor;
   final String accentColor;
   final String backgroundColor;
@@ -63,6 +64,7 @@ class AppSettings {
     required this.storeClosedMessage,
     required this.minimumOrderValue,
     required this.baseDeliveryFee,
+    required this.displayMode,
     required this.primaryColor,
     required this.accentColor,
     required this.backgroundColor,
@@ -79,6 +81,7 @@ class AppSettings {
       storeClosedMessage: json['storeClosedMessage'] ?? '',
       minimumOrderValue: json['minimumOrderValue'] ?? 0,
       baseDeliveryFee: json['baseDeliveryFee'] ?? 0,
+      displayMode: json['displayMode'] ?? 'AUTO',
       primaryColor: json['primaryColor'] ?? '#0C831F',
       accentColor: json['accentColor'] ?? '#FF6D00',
       backgroundColor: json['backgroundColor'] ?? '#F4F6F8',
